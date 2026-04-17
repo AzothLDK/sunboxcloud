@@ -1,6 +1,6 @@
 # sunboxcloud
 
-SunBox Cloud Flutter 客户端工程。
+SunBox Cloud - H （Home版） Flutter 客户端工程。
 
 ## 功能概览
 
@@ -61,24 +61,24 @@ flutter run -d <device_id>
 
 ### 后端地址
 
-项目网络请求入口在 [http_manager.dart](file:///Users/ludaokuo/Documents/项目/sunboxcloud/lib/utils/network/http_manager.dart) 中的 `host` 常量（`baseUrl`）。如需切换环境，修改该值即可。
+项目网络请求入口在 `lib/utils/network/http_manager.dart` 中的 `host` 常量（`baseUrl`）。如需切换环境，修改该值即可。
 
 ### 登录接口
 
-登录封装在 [api_service.dart](file:///Users/ludaokuo/Documents/项目/sunboxcloud/lib/utils/network/api_service.dart) 的 `login(...)`，控制器调用位于 [auth_controller.dart](file:///Users/ludaokuo/Documents/项目/sunboxcloud/lib/controllers/auth_controller.dart) 的 `login()`。
+登录封装在 `lib/utils/network/api_service.dart` 的 `login(...)`，控制器调用位于 `lib/controllers/auth_controller.dart` 的 `login()`。
 
 注意：登录请求包含加密逻辑（见 `crypto_util.dart`），需与后端保持一致。
 
 ### 本地存储（账号/密码/Token）
 
-本地存储封装在 [storage.dart](file:///Users/ludaokuo/Documents/项目/sunboxcloud/lib/utils/storage.dart)。  
+本地存储封装在 `lib/utils/storage.dart`。  
 应用启动时需要先初始化（`main.dart` 中已处理）。
 
 ### Google / Apple 登录
 
 - Google 登录需要 Android 侧完成配置，否则会报：
   `serverClientId must be provided on Android`
-- `serverClientId` 在 [social_auth_service.dart](file:///Users/ludaokuo/Documents/项目/sunboxcloud/lib/services/social_auth_service.dart) 中配置
+- `serverClientId` 在 `lib/services/social_auth_service.dart` 中配置
 - Android 侧通常还需要 `google-services.json`、并完成对应 Gradle 配置
 
 如果暂时不需要第三方登录，可以先不配置，代码已做异常捕获避免影响主流程。
