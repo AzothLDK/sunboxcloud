@@ -142,6 +142,72 @@ class _HomeTabState extends State<HomeTab> {
     }
   }
 
+  void _showInfoTooltip(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.all(15),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.1),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.info_outline, color: primaryColor, size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    'self_sufficiency_rate_info'.tr,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: textColor,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'self_sufficiency_rate_desc'.tr,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: textLightColor,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 5),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text(
+                    'got_it'.tr,
+                    style: TextStyle(
+                      color: primaryColor,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -184,12 +250,16 @@ class _HomeTabState extends State<HomeTab> {
           ),
         ),
         const SizedBox(height: 15),
-        Stack(
-          children: [
-            Image.asset('assets/centerhouse.png'),
-            const AnimatedFlowChart(),
-            const EnergyFlowOverlay(),
-          ],
+        AspectRatio(
+          aspectRatio: 400 / 350,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Image.asset('assets/centerhouse.png', fit: BoxFit.fill),
+              const AnimatedFlowChart(),
+              const EnergyFlowOverlay(),
+            ],
+          ),
         ),
         Expanded(
           child: Center(
@@ -355,12 +425,16 @@ class _HomeTabState extends State<HomeTab> {
           ),
         ),
         const SizedBox(height: 15),
-        Stack(
-          children: [
-            Image.asset('assets/centerhouse.png'),
-            const AnimatedFlowChart(),
-            const EnergyFlowOverlay(),
-          ],
+        AspectRatio(
+          aspectRatio: 400 / 350,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Image.asset('assets/centerhouse.png', fit: BoxFit.fill),
+              const AnimatedFlowChart(),
+              const EnergyFlowOverlay(),
+            ],
+          ),
         ),
         Container(
           padding: const EdgeInsets.all(20),
@@ -428,22 +502,24 @@ class _HomeTabState extends State<HomeTab> {
                         children: [
                           Row(
                             children: [
-                              Container(
-                                width: 35,
-                                height: 35,
-                                decoration: const BoxDecoration(
-                                  color: Color(0xFFE8F5E8),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Center(
-                                  child: Icon(
-                                    Icons.circle_outlined,
-                                    color: primaryColor,
-                                    size: 22,
-                                  ),
+                              SizedBox(
+                                width: 25,
+                                height: 25,
+                                child: Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    CircularProgressIndicator(
+                                      value: 0.66,
+                                      strokeWidth: 6,
+                                      backgroundColor: primaryColor.withValues(
+                                        alpha: 0.15,
+                                      ),
+                                      color: primaryColor,
+                                    ),
+                                  ],
                                 ),
                               ),
-                              const SizedBox(width: 10),
+                              const SizedBox(width: 8),
                               Text(
                                 '66%',
                                 style: TextStyle(
@@ -452,11 +528,25 @@ class _HomeTabState extends State<HomeTab> {
                                   color: textColor,
                                 ),
                               ),
-                              const SizedBox(width: 8),
-                              const Icon(
-                                Icons.info_outline,
-                                color: textLightColor,
-                                size: 16,
+                              // const SizedBox(width: 8),
+                              // Text(
+                              //   '%',
+                              //   style: TextStyle(
+                              //     fontSize: 18,
+                              //     fontWeight: FontWeight.bold,
+                              //     color: textColor,
+                              //   ),
+                              // ),
+                              const SizedBox(width: 4),
+                              GestureDetector(
+                                onTap: () {
+                                  _showInfoTooltip(context);
+                                },
+                                child: const Icon(
+                                  Icons.info_outline,
+                                  color: textLightColor,
+                                  size: 16,
+                                ),
                               ),
                             ],
                           ),
@@ -502,12 +592,6 @@ class _HomeTabState extends State<HomeTab> {
                                   fontWeight: FontWeight.bold,
                                   color: textColor,
                                 ),
-                              ),
-                              const SizedBox(width: 8),
-                              const Icon(
-                                Icons.info_outline,
-                                color: textLightColor,
-                                size: 16,
                               ),
                             ],
                           ),

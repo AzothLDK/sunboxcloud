@@ -1,171 +1,175 @@
 import 'package:flutter/material.dart';
 import '../../utils/constants.dart';
+import 'animated_flow_chart.dart';
 
 class EnergyFlowOverlay extends StatelessWidget {
   const EnergyFlowOverlay({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Positioned.fill(
-      child: CustomPaint(
-        painter: EnergyFlowPainter(),
-        child: Stack(
-          children: [
-            // 温度和天气
-            Positioned(
-              top: 0,
-              left: 20,
-              child: Text(
-                '23°C Cloudy',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: textColor,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final height = constraints.maxHeight;
+
+        double sx(double x) => x / kDesignWidth * width;
+        double sy(double y) => y / kDesignHeight * height;
+
+        return SizedBox(
+          width: width,
+          height: height,
+          child: CustomPaint(
+            painter: EnergyFlowPainter(width: width, height: height),
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Positioned(
+                  top: sy(0),
+                  left: sx(20),
+                  child: Text(
+                    '23°C Cloudy',
+                    style: TextStyle(
+                      fontSize: sy(16),
+                      fontWeight: FontWeight.bold,
+                      color: textColor,
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            // Solar
-            Positioned(
-              top: 20,
-              left: 140,
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                child: Text(
-                  'Solar\n0.5 kW',
-                  style: TextStyle(fontSize: 14, color: textColor),
-                  textAlign: TextAlign.right,
+                Positioned(
+                  top: sy(20),
+                  left: sx(140),
+                  child: Container(
+                    padding: EdgeInsets.all(sy(8)),
+                    child: Text(
+                      'Solar\n0.5 kW',
+                      style: TextStyle(fontSize: sy(14), color: textColor),
+                      textAlign: TextAlign.right,
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            // Grid
-            Positioned(
-              top: 0,
-              right: 60,
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                child: Text(
-                  'Grid\n0.5 kW',
-                  style: TextStyle(fontSize: 14, color: textColor),
-                  textAlign: TextAlign.center,
+                Positioned(
+                  top: sy(0),
+                  right: sx(60),
+                  child: Container(
+                    padding: EdgeInsets.all(sy(8)),
+                    child: Text(
+                      'Grid\n0.5 kW',
+                      style: TextStyle(fontSize: sy(14), color: textColor),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            // House Load
-            Positioned(
-              bottom: 20,
-              left: 20,
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                child: Text(
-                  'House Load\n0.7 kW',
-                  style: TextStyle(fontSize: 14, color: textColor),
-                  textAlign: TextAlign.right,
+                Positioned(
+                  bottom: sy(20),
+                  left: sx(20),
+                  child: Container(
+                    padding: EdgeInsets.all(sy(8)),
+                    child: Text(
+                      'House Load\n0.7 kW',
+                      style: TextStyle(fontSize: sy(14), color: textColor),
+                      textAlign: TextAlign.right,
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            // EV Charger
-            Positioned(
-              bottom: 0,
-              left: 160,
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                child: Text(
-                  'EV Charger\n7 kW',
-                  style: TextStyle(fontSize: 14, color: textColor),
-                  textAlign: TextAlign.left,
+                Positioned(
+                  bottom: sy(0),
+                  left: sx(160),
+                  child: Container(
+                    padding: EdgeInsets.all(sy(8)),
+                    child: Text(
+                      'EV Charger\n7 kW',
+                      style: TextStyle(fontSize: sy(14), color: textColor),
+                      textAlign: TextAlign.left,
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            // SunBox
-            Positioned(
-              bottom: 0,
-              right: 80,
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                child: Text(
-                  'SunBox\n0.5 kW',
-                  style: TextStyle(fontSize: 14, color: textColor),
-                  textAlign: TextAlign.center,
+                Positioned(
+                  bottom: sy(0),
+                  right: sx(80),
+                  child: Container(
+                    padding: EdgeInsets.all(sy(8)),
+                    child: Text(
+                      'SunBox\n0.5 kW',
+                      style: TextStyle(fontSize: sy(14), color: textColor),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }
 
 class EnergyFlowPainter extends CustomPainter {
+  final double width;
+  final double height;
+
+  EnergyFlowPainter({required this.width, required this.height});
+
+  double sx(double x) => x / kDesignWidth * width;
+  double sy(double y) => y / kDesignHeight * height;
+  Offset so(double x, double y) => Offset(sx(x), sy(y));
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
       ..color = primaryColor
-      ..strokeWidth = 1
+      ..strokeWidth = sy(1)
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
 
-    // 绘制虚线
     const dashWidth = 5.0;
     const dashSpace = 3.0;
 
-    // Solar 到 房子顶部
     _drawDashedLine(
       canvas,
       paint,
-      size,
-      Offset(200, 30),
-      Offset(200, 100),
-      dashWidth,
-      dashSpace,
+      so(200, 30),
+      so(200, 100),
+      sx(dashWidth),
+      sx(dashSpace),
     );
 
-    // Grid 到 房子右侧
     _drawDashedLine(
       canvas,
       paint,
-      size,
-      Offset(340, 10),
-      Offset(340, 60),
-      dashWidth,
-      dashSpace,
+      so(340, 10),
+      so(340, 60),
+      sx(dashWidth),
+      sx(dashSpace),
     );
 
-    //House Load 房子左侧
     _drawDashedLine(
       canvas,
       paint,
-      size,
-      Offset(120, 240),
-      Offset(120, 330),
-      dashWidth,
-      dashSpace,
+      so(120, 240),
+      so(120, 330),
+      sx(dashWidth),
+      sx(dashSpace),
     );
 
-    //EV Charger 房子左侧
     _drawDashedLine(
       canvas,
       paint,
-      size,
-      Offset(170, 240),
-      Offset(170, 320),
-      dashWidth,
-      dashSpace,
+      so(170, 240),
+      so(170, 320),
+      sx(dashWidth),
+      sx(dashSpace),
     );
   }
 
   void _drawDashedLine(
     Canvas canvas,
     Paint paint,
-    Size size,
     Offset start,
     Offset end,
     double dashWidth,
     double dashSpace,
   ) {
-    final path = Path();
-    path.moveTo(start.dx, start.dy);
-
     final distance = (end - start).distance;
     final dashCount = (distance / (dashWidth + dashSpace)).floor();
 
@@ -187,7 +191,6 @@ class EnergyFlowPainter extends CustomPainter {
       remainingDistance -= dashWidth + dashSpace;
     }
 
-    // 绘制最后一段
     if (remainingDistance > 0) {
       final progress = currentDistance / distance;
       final x = start.dx + (end.dx - start.dx) * progress;
@@ -197,7 +200,7 @@ class EnergyFlowPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) {
-    return false;
+  bool shouldRepaint(covariant EnergyFlowPainter oldDelegate) {
+    return oldDelegate.width != width || oldDelegate.height != height;
   }
 }

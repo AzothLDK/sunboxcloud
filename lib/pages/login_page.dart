@@ -11,7 +11,6 @@ class LoginPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final authController = Get.put(AuthController());
-
     return Scaffold(
       backgroundColor: backgroundColor,
       body: SafeArea(

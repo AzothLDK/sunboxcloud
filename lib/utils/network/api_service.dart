@@ -72,4 +72,14 @@ class ApiService {
       queryParameters: queryParameters,
     );
   }
+
+  // 谷歌Token登录接口
+  static Future<Map<String, dynamic>> loginByGoogleToken(
+    Map<String, dynamic> data,
+  ) {
+    return _httpManager.post(
+      '/admin/system/mobileApp/loginByGoogleToken',
+      data: data,
+    );
+  }
 }

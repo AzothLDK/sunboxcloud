@@ -169,6 +169,7 @@ class _AssistantTabState extends State<AssistantTab> {
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
+        // leading: null,
         title: Text('ai_assistant'.tr),
         // backgroundColor: primaryColor,
         actions: [

@@ -338,21 +338,85 @@ class AuthController extends GetxController {
       if (result != null) {
         developer.log('Google login success: $result', name: 'AuthController');
 
-        // TODO: 将Google登录凭证发送到后端进行验证
-        // final response = await ApiService.socialLogin({
-        //   'provider': 'google',
-        //   'idToken': result['idToken'],
-        //   'email': result['email'],
-        //   'displayName': result['displayName'],
-        // });
+        final idToken = result['idToken'];
+        if (idToken == null || idToken.toString().isEmpty) {
+          Get.snackbar(
+            'login_failed'.tr,
+            'google_token_invalid'.tr,
+            snackPosition: SnackPosition.BOTTOM,
+          );
+          return;
+        }
 
-        // 模拟登录成功
-        Get.snackbar(
-          'success'.tr,
-          'google_login_success'.tr,
-          snackPosition: SnackPosition.BOTTOM,
-        );
-        Get.offNamed('/home');
+        // 调用后端谷歌登录接口
+        final response = await ApiService.loginByGoogleToken({
+          'access_token': idToken,
+        });
+
+        if (response['code'] == 200) {
+          developer.log(
+            'Google backend login success: $response',
+            name: 'AuthController',
+          );
+
+          // 保存token
+          if (response['data'] != null) {
+            GlobalStorage.saveToken(response['data']);
+          }
+
+          // 获取用户信息
+          try {
+            final userInfo = await ApiService.getLoginInfo();
+            if (userInfo['code'] == 200 && userInfo['data'] != null) {
+              final userData = userInfo['data'] as Map<String, dynamic>;
+              final user = userData['user'] as Map<String, dynamic>?;
+              if (user != null) {
+                await GlobalStorage.saveLoginInfo(user);
+              }
+            }
+          } catch (e) {
+            developer.log(
+              'Failed to get user info: $e',
+              name: 'AuthController',
+            );
+          }
+
+          Get.snackbar(
+            'success'.tr,
+            'google_login_success'.tr,
+            snackPosition: SnackPosition.BOTTOM,
+          );
+          Get.offNamed('/home');
+        } else if (response['code'] == 206) {
+          developer.log(
+            'Google user not found, need to register',
+            name: 'AuthController',
+          );
+
+          final email = result['email'];
+          if (email == null || email.toString().isEmpty) {
+            Get.snackbar(
+              'error'.tr,
+              'google_email_not_found'.tr,
+              snackPosition: SnackPosition.BOTTOM,
+            );
+            return;
+          }
+
+          Get.snackbar(
+            'info'.tr,
+            'google_user_need_register'.tr,
+            snackPosition: SnackPosition.BOTTOM,
+          );
+
+          Get.toNamed('/google-register', arguments: {'email': email});
+        } else {
+          Get.snackbar(
+            'login_failed'.tr,
+            response['msg'] ?? 'google_login_failed'.tr,
+            snackPosition: SnackPosition.BOTTOM,
+          );
+        }
       } else {
         Get.snackbar(
           'login_failed'.tr,

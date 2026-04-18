@@ -114,34 +114,34 @@ class _AccountPageState extends State<AccountPage> {
                         }
                       },
                     ),
-                    const Divider(height: 1, indent: 16),
-                    ListTile(
-                      title: Text(
-                        'address'.tr,
-                        style: TextStyle(fontSize: 14, color: textLightColor),
-                      ),
-                      subtitle: Text(
-                        _address.isNotEmpty ? _address : 'not_set'.tr,
-                        style: TextStyle(fontSize: 16, color: textColor),
-                      ),
-                      trailing: const Icon(
-                        Icons.chevron_right,
-                        color: textLightColor,
-                      ),
-                      onTap: () async {
-                        final result = await Get.to(
-                          () => EditFieldPage(
-                            fieldType: EditFieldType.address,
-                            currentValue: _address,
-                          ),
-                        );
-                        if (result != null) {
-                          setState(() {
-                            _address = result;
-                          });
-                        }
-                      },
-                    ),
+                    // const Divider(height: 1, indent: 16),
+                    // ListTile(
+                    //   title: Text(
+                    //     'address'.tr,
+                    //     style: TextStyle(fontSize: 14, color: textLightColor),
+                    //   ),
+                    //   subtitle: Text(
+                    //     _address.isNotEmpty ? _address : 'not_set'.tr,
+                    //     style: TextStyle(fontSize: 16, color: textColor),
+                    //   ),
+                    //   trailing: const Icon(
+                    //     Icons.chevron_right,
+                    //     color: textLightColor,
+                    //   ),
+                    //   onTap: () async {
+                    //     final result = await Get.to(
+                    //       () => EditFieldPage(
+                    //         fieldType: EditFieldType.address,
+                    //         currentValue: _address,
+                    //       ),
+                    //     );
+                    //     if (result != null) {
+                    //       setState(() {
+                    //         _address = result;
+                    //       });
+                    //     }
+                    //   },
+                    // ),
                     const Divider(height: 1, indent: 16),
                     ListTile(
                       title: Text(

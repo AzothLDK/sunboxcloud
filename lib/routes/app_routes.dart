@@ -1,6 +1,8 @@
 import 'package:get/get.dart';
 import '../pages/login_page.dart';
 import '../pages/register_page.dart';
+import '../pages/google_register_page.dart';
+import '../pages/complete_profile_page.dart';
 import '../pages/setting/language_page.dart';
 import '../pages/home/home_page.dart';
 import '../pages/backup_reserve_page.dart';
@@ -21,6 +23,8 @@ import '../pages/distributionNetwork/distributionNetwork_page.dart';
 class AppRoutes {
   static const String login = '/login';
   static const String register = '/register';
+  static const String googleRegister = '/google-register';
+  static const String completeProfile = '/complete-profile';
   static const String language = '/language';
   static const String home = '/home';
   static const String backupReserve = '/backup-reserve';
@@ -46,6 +50,16 @@ class AppRoutes {
     GetPage(
       name: register,
       page: () => const RegisterPage(),
+      transition: Transition.fade,
+    ),
+    GetPage(
+      name: googleRegister,
+      page: () => GoogleRegisterPage(email: Get.arguments['email']),
+      transition: Transition.fade,
+    ),
+    GetPage(
+      name: completeProfile,
+      page: () => CompleteProfilePage(email: Get.arguments['email']),
       transition: Transition.fade,
     ),
     GetPage(
