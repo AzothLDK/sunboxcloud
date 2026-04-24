@@ -5,6 +5,7 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+
 android {
     namespace = "com.smartwuxi.sunboxcloud"
     compileSdk = flutter.compileSdkVersion
@@ -42,3 +43,4 @@ android {
 flutter {
     source = "../.."
 }
+

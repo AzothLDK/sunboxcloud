@@ -37,8 +37,8 @@ class HttpManager {
   late Dio _dio;
 
   static const String baseUrl = host; // API基础URL
-  static const int connectTimeout = 15000; // 连接超时时间（毫秒）
-  static const int receiveTimeout = 15000; // 接收超时时间（毫秒）
+  static const int connectTimeout = 5000; // 连接超时时间（毫秒）
+  static const int receiveTimeout = 5000; // 接收超时时间（毫秒）
 
   HttpManager._internal() {
     // 初始化Dio

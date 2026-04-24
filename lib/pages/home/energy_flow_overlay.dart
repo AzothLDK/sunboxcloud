@@ -155,8 +155,8 @@ class EnergyFlowPainter extends CustomPainter {
     _drawDashedLine(
       canvas,
       paint,
-      so(170, 240),
-      so(170, 320),
+      so(160, 240),
+      so(160, 320),
       sx(dashWidth),
       sx(dashSpace),
     );

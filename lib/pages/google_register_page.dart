@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:sunboxcloud/utils/network/api_service.dart';
 import 'package:sunboxcloud/utils/network/crypto_util.dart';
 import '../utils/constants.dart';
+import '../utils/toast_utils.dart';
 
 class GoogleRegisterPage extends StatefulWidget {
   final String email;
@@ -74,11 +75,7 @@ class _GoogleRegisterPageState extends State<GoogleRegisterPage> {
       final response = await ApiService.register(encryptedData);
 
       if (response['code'] == 200) {
-        Get.snackbar(
-          'success'.tr,
-          'register_success'.tr,
-          snackPosition: SnackPosition.BOTTOM,
-        );
+        ToastUtils.success('register_success'.tr);
         Get.offAllNamed('/login');
         // Get.offNamed('/complete-profile', arguments: {'email': widget.email});
       } else {

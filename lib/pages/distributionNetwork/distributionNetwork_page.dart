@@ -7,14 +7,19 @@ import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:smart_ble_link/smart_ble_link.dart';
+import 'package:wifi_scan/wifi_scan.dart';
+import 'package:network_info_plus/network_info_plus.dart';
 import '../../utils/constants.dart';
+import '../../routes/app_routes.dart';
+import '../../utils/toast_utils.dart';
+import '../../utils/network/api_service.dart';
 
 /// Represents the state of the BLE linking process
 class _LinkingState {
   final bool isLinking;
   final String message;
 
-  const _LinkingState({this.isLinking = false, this.message = '请开始配网'});
+  const _LinkingState({this.isLinking = false, this.message = ''});
 
   _LinkingState copyWith({bool? isLinking, String? message}) {
     return _LinkingState(
@@ -45,6 +50,11 @@ class _DistributionNetworkPageState extends State<DistributionNetworkPage> {
   );
   final TextEditingController _userDataController = TextEditingController();
 
+  final TextEditingController _qrCodeController = TextEditingController();
+
+  String? _stationId;
+  String? _stationName;
+
   final ValueNotifier<_LinkingState> _stateNotifier = ValueNotifier(
     const _LinkingState(),
   );
@@ -54,9 +64,128 @@ class _DistributionNetworkPageState extends State<DistributionNetworkPage> {
   @override
   void initState() {
     super.initState();
+    final arguments = Get.arguments as Map<String, dynamic>?;
+    _stationId = arguments?['stationId'];
+    _stationName = arguments?['stationName'];
     _checkSimulator();
     _initBleLink();
     _listenToEvents();
+    _getCurrentWifiSSID();
+  }
+
+  Future<void> _getCurrentWifiSSID() async {
+    try {
+      final info = NetworkInfo();
+      String? ssid = await info.getWifiName();
+      if (ssid != null) {
+        // Remove quotes if present (iOS often adds them)
+        if (ssid.startsWith('"') && ssid.endsWith('"')) {
+          ssid = ssid.substring(1, ssid.length - 1);
+        }
+        setState(() {
+          _ssidController.text = ssid!;
+        });
+      }
+    } catch (e) {
+      developer.log('Error getting WiFi SSID: $e');
+    }
+  }
+
+  Future<void> _scanWifiNetworks() async {
+    final status = await Permission.location.request();
+    if (!status.isGranted) {
+      ToastUtils.error(
+        'location_permission_for_wifi'.tr,
+        title: 'permission_required'.tr,
+      );
+      return;
+    }
+
+    Get.dialog(
+      const Center(child: CircularProgressIndicator()),
+      barrierDismissible: false,
+    );
+
+    try {
+      final canScan = await WiFiScan.instance.canStartScan();
+      if (canScan != CanStartScan.yes) {
+        Get.back();
+        ToastUtils.error(
+          '${'cannot_start_wifi_scan'.tr}: $canScan',
+          title: 'error_occurred'.tr,
+        );
+        return;
+      }
+
+      await WiFiScan.instance.startScan();
+      await Future.delayed(const Duration(seconds: 2));
+
+      final results = await WiFiScan.instance.getScannedResults();
+      Get.back();
+
+      if (results.isEmpty) {
+        ToastUtils.warning('no_wifi_found'.tr);
+        return;
+      }
+
+      results.sort((a, b) => b.level.compareTo(a.level));
+
+      Get.bottomSheet(
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'select_wifi_network'.tr,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              Flexible(
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: results.length,
+                  separatorBuilder: (context, index) => const Divider(),
+                  itemBuilder: (context, index) {
+                    final network = results[index];
+                    return ListTile(
+                      leading: const Icon(Icons.wifi),
+                      title: Text(
+                        network.ssid.isEmpty
+                            ? 'unknown_network'.tr
+                            : network.ssid,
+                      ),
+                      subtitle: Text(
+                        '${'signal_strength'.tr}: ${network.level} dBm',
+                      ),
+                      onTap: () {
+                        setState(() {
+                          _ssidController.text = network.ssid;
+                        });
+                        Get.back();
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    } catch (e) {
+      Get.back();
+      developer.log('Error scanning WiFi: $e');
+      ToastUtils.error('wifi_scan_failed'.tr);
+    }
   }
 
   void _checkSimulator() {
@@ -67,17 +196,17 @@ class _DistributionNetworkPageState extends State<DistributionNetworkPage> {
 
     if (Platform.isIOS) {
       isSimulator = !Platform.environment.containsKey('DYLD_INSERT_LIBRARIES');
-      message = 'iOS 模拟器不支持蓝牙功能，请使用真机测试配网功能。';
+      message = 'ios_simulator_no_bluetooth'.tr;
     } else if (Platform.isAndroid) {
       isSimulator = _isAndroidEmulator();
-      message = 'Android 模拟器不支持蓝牙功能，请使用真机测试配网功能。';
+      message = 'android_simulator_no_bluetooth'.tr;
     }
 
     if (isSimulator) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         Get.dialog(
           AlertDialog(
-            title: const Text('提示'),
+            title: Text('info'.tr),
             content: Text(message),
             actions: [
               TextButton(
@@ -85,7 +214,10 @@ class _DistributionNetworkPageState extends State<DistributionNetworkPage> {
                   Get.back();
                   Get.back();
                 },
-                child: Text('确定', style: TextStyle(color: primaryColor)),
+                child: Text(
+                  'confirm'.tr,
+                  style: TextStyle(color: primaryColor),
+                ),
               ),
             ],
           ),
@@ -135,16 +267,20 @@ class _DistributionNetworkPageState extends State<DistributionNetworkPage> {
     _eventSubscription = SmartBleLink.linkingEvents.listen(
       (event) {
         if (event is LinkingProgress) {
-          _updateState(message: '配网中：${event.message}');
+          _updateState(message: '${'configuring'.tr}: ${event.message}');
         } else if (event is LinkingSuccess) {
           _updateState(
-            message: '配网成功！\nMAC: ${event.mac}\nIP: ${event.ip}',
+            message:
+                '${'config_success'.tr}\nMAC: ${event.mac}\nIP: ${event.ip}',
             isLinking: false,
           );
         } else if (event is LinkingError) {
-          _updateState(message: '配网失败：${event.message}', isLinking: false);
+          _updateState(
+            message: '${'config_failed'.tr}: ${event.message}',
+            isLinking: false,
+          );
         } else if (event is LinkingTimeout) {
-          _updateState(message: '配网超时', isLinking: false);
+          _updateState(message: 'config_timeout'.tr, isLinking: false);
         }
       },
       onError: (error) {
@@ -153,7 +289,10 @@ class _DistributionNetworkPageState extends State<DistributionNetworkPage> {
           name: 'DistributionNetworkPage',
           error: error,
         );
-        _updateState(message: '发生错误：$error', isLinking: false);
+        _updateState(
+          message: '${'error_occurred'.tr}: $error',
+          isLinking: false,
+        );
       },
     );
   }
@@ -167,7 +306,7 @@ class _DistributionNetworkPageState extends State<DistributionNetworkPage> {
 
   /// Start the linking process after checking permissions.
   Future<void> _startLinking() async {
-    _updateState(isLinking: true, message: '正在检查权限...');
+    _updateState(isLinking: true, message: 'checking_permissions'.tr);
 
     if (Platform.isAndroid) {
       final Map<Permission, PermissionStatus> statuses = await [
@@ -179,27 +318,34 @@ class _DistributionNetworkPageState extends State<DistributionNetworkPage> {
 
       final bool hasDenied = statuses.values.any((status) => !status.isGranted);
       if (hasDenied) {
-        _updateState(isLinking: false, message: '需要位置和蓝牙权限才能进行配网！');
+        _updateState(
+          isLinking: false,
+          message: 'location_bluetooth_permission_required'.tr,
+        );
         return;
       }
     } else if (Platform.isIOS) {
-      // iOS only requires bluetooth permission here.
       final PermissionStatus status = await Permission.bluetooth.request();
       if (!status.isGranted) {
-        _updateState(isLinking: false, message: '需要蓝牙权限才能进行配网！');
+        _updateState(
+          isLinking: false,
+          message: 'bluetooth_permission_required'.tr,
+        );
         return;
       }
     }
 
-    _updateState(message: '开始配网...');
+    _updateState(message: 'starting_config'.tr);
 
     try {
       await SmartBleLink.startLinking(
         ssid: _ssidController.text.trim(),
         password: _passwordController.text.trim(),
         bleName: _bleNameController.text.trim(),
-        userData: _userDataController.text.trim(),
-        deviceFindingType: 3, // UDP+BLE mode
+        userData: _qrCodeController.text.trim().isNotEmpty
+            ? _qrCodeController.text.trim()
+            : _userDataController.text.trim(),
+        deviceFindingType: 3,
       );
     } catch (e) {
       developer.log(
@@ -207,7 +353,7 @@ class _DistributionNetworkPageState extends State<DistributionNetworkPage> {
         name: 'DistributionNetworkPage',
         error: e,
       );
-      _updateState(isLinking: false, message: '启动配网失败');
+      _updateState(isLinking: false, message: 'config_start_failed'.tr);
     }
   }
 
@@ -215,13 +361,66 @@ class _DistributionNetworkPageState extends State<DistributionNetworkPage> {
   Future<void> _stopLinking() async {
     try {
       await SmartBleLink.stopLinking();
-      _updateState(isLinking: false, message: '配网已停止');
+      _updateState(isLinking: false, message: 'config_stopped'.tr);
     } catch (e) {
       developer.log(
         'Failed to stop linking: $e',
         name: 'DistributionNetworkPage',
         error: e,
       );
+    }
+  }
+
+  /// Navigate to scan page and get result
+  Future<void> _scanQRCode() async {
+    final result = await Get.toNamed(AppRoutes.scan);
+    if (result != null && result is String) {
+      setState(() {
+        _qrCodeController.text = result;
+      });
+      ToastUtils.success('device_info_obtained'.tr);
+    }
+  }
+
+  Future<void> _addDevice() async {
+    try {
+      Get.dialog(
+        const Center(child: CircularProgressIndicator()),
+        barrierDismissible: false,
+      );
+      // SVProgressHUD.show();
+      final now = DateTime.now();
+      final sn =
+          '${now.year}'
+          '${now.month.toString().padLeft(2, '0')}'
+          '${now.day.toString().padLeft(2, '0')}'
+          '${now.hour.toString().padLeft(2, '0')}'
+          '${now.minute.toString().padLeft(2, '0')}'
+          '${now.second.toString().padLeft(2, '0')}'
+          '${now.millisecond.toString().padLeft(3, '0')}';
+
+      final Map<String, dynamic> data = {
+        'cpSn': sn,
+        if (_stationId != null) 'stationId': _stationId,
+        if (_stationName != null) 'stationName': _stationName,
+      };
+
+      final result = await ApiService.addDevice(data);
+      Get.back();
+      if (result['code'] == 200) {
+        Get.back(result: true);
+        ToastUtils.success('device_added_success'.tr);
+      } else {
+        ToastUtils.error(result['msg'] ?? 'device_added_failed'.tr);
+      }
+    } catch (e) {
+      Get.back();
+      developer.log(
+        'Failed to add device: $e',
+        name: 'DistributionNetworkPage',
+        error: e,
+      );
+      ToastUtils.error('device_added_failed'.tr);
     }
   }
 
@@ -243,7 +442,10 @@ class _DistributionNetworkPageState extends State<DistributionNetworkPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('设备配网'),
+        title: Text(
+          'device_network_config'.tr,
+          style: const TextStyle(fontSize: 18),
+        ),
         centerTitle: true,
         elevation: 0,
         backgroundColor: Colors.transparent,
@@ -269,15 +471,62 @@ class _DistributionNetworkPageState extends State<DistributionNetworkPage> {
                 _buildCard(
                   child: Column(
                     children: [
-                      _buildTextField(
-                        controller: _ssidController,
-                        label: 'Wi-Fi 名称 (SSID)',
-                        icon: Icons.wifi,
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildTextField(
+                              controller: _qrCodeController,
+                              label: 'device_qr_info'.tr,
+                              icon: Icons.qr_code_scanner,
+                              hint: 'scan_device_qr_hint'.tr,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          IconButton.filled(
+                            onPressed: _scanQRCode,
+                            icon: const Icon(Icons.center_focus_weak),
+                            style: IconButton.styleFrom(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.all(12),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _buildCard(
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildTextField(
+                              controller: _ssidController,
+                              label: 'wifi_name'.tr,
+                              icon: Icons.wifi,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          IconButton.filledTonal(
+                            onPressed: _scanWifiNetworks,
+                            icon: const Icon(Icons.list),
+                            style: IconButton.styleFrom(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.all(12),
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 16),
                       _buildTextField(
                         controller: _passwordController,
-                        label: 'Wi-Fi 密码',
+                        label: 'wifi_password'.tr,
                         icon: Icons.lock,
                         obscureText: true,
                       ),
@@ -290,20 +539,15 @@ class _DistributionNetworkPageState extends State<DistributionNetworkPage> {
                     children: [
                       _buildTextField(
                         controller: _bleNameController,
-                        label: '蓝牙设备名称',
+                        enabled: false,
+                        label: 'ble_device_name'.tr,
                         icon: Icons.bluetooth,
-                        hint: '默认为AZ',
-                      ),
-                      const SizedBox(height: 16),
-                      _buildTextField(
-                        controller: _userDataController,
-                        label: '自定义数据 (可选)',
-                        icon: Icons.data_usage,
+                        hint: 'ble_name_default'.tr,
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 15),
                 ValueListenableBuilder<_LinkingState>(
                   valueListenable: _stateNotifier,
                   builder: (context, state, child) {
@@ -337,7 +581,7 @@ class _DistributionNetworkPageState extends State<DistributionNetworkPage> {
           ),
         ],
       ),
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(15),
       child: child,
     );
   }
@@ -347,11 +591,13 @@ class _DistributionNetworkPageState extends State<DistributionNetworkPage> {
     required String label,
     required IconData icon,
     bool obscureText = false,
+    bool enabled = true,
     String? hint,
   }) {
     return TextField(
       controller: controller,
       obscureText: obscureText,
+      enabled: enabled,
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
@@ -415,38 +661,67 @@ class _DistributionNetworkPageState extends State<DistributionNetworkPage> {
   }
 
   Widget _buildActionButtons(_LinkingState state) {
-    return Row(
+    return Column(
       children: [
-        Expanded(
-          child: FilledButton(
-            onPressed: state.isLinking ? null : _startLinking,
-            style: FilledButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+        Row(
+          children: [
+            Expanded(
+              child: FilledButton(
+                onPressed: state.isLinking ? null : _startLinking,
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: Text(
+                  'start_config'.tr,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ),
-            child: const Text(
-              '开始配网',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            const SizedBox(width: 10),
+            Expanded(
+              child: FilledButton.tonal(
+                onPressed: state.isLinking ? _stopLinking : null,
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  backgroundColor: Theme.of(context).colorScheme.errorContainer,
+                  foregroundColor: Theme.of(
+                    context,
+                  ).colorScheme.onErrorContainer,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: Text(
+                  'stop_config'.tr,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
             ),
-          ),
+          ],
         ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: FilledButton.tonal(
-            onPressed: state.isLinking ? _stopLinking : null,
-            style: FilledButton.styleFrom(
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton(
+            onPressed: state.isLinking ? null : _addDevice,
+            style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 16),
-              backgroundColor: Theme.of(context).colorScheme.errorContainer,
-              foregroundColor: Theme.of(context).colorScheme.onErrorContainer,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
-            child: const Text(
-              '停止配网',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            child: Text(
+              'simulate_add_device'.tr,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
             ),
           ),
         ),

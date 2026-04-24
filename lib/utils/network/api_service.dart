@@ -58,8 +58,36 @@ class ApiService {
     return _httpManager.get('/hems/basic/station/getList');
   }
 
+  // 保存或编辑站点接口
+  static Future<Map<String, dynamic>> saveOrEditStation(
+    Map<String, dynamic> data,
+  ) {
+    return _httpManager.post('/hems/basic/station/saveOrEdit', data: data);
+  }
+
+  // 获取设备列表接口
+  static Future<Map<String, dynamic>> getDeviceList(
+    String stationId,
+    String deviceType,
+  ) {
+    return _httpManager.get(
+      '/hems/basic/device/getList',
+      queryParameters: {'stationId': stationId, 'deviceTypes': deviceType},
+    );
+  }
+
+  // 删除设备接口
+  static Future<Map<String, dynamic>> removeDevice(String id) {
+    return _httpManager.delete('/hems/basic/device/remove/$id');
+  }
+
+  // 添加设备接口
+  static Future<Map<String, dynamic>> addDevice(Map<String, dynamic> data) {
+    return _httpManager.post('/hems/basic/device/addDevice', data: data);
+  }
+
   // 获取登录用户信息接口
-  static Future<Map<String, dynamic>> getLoginInfo() {
+  static Future<Map<String, dynamic>> getSunboxLoginInfo() {
     return _httpManager.get('/admin/system/getInfo');
   }
 
@@ -79,6 +107,16 @@ class ApiService {
   ) {
     return _httpManager.post(
       '/admin/system/mobileApp/loginByGoogleToken',
+      data: data,
+    );
+  }
+
+  // 苹果Token登录接口
+  static Future<Map<String, dynamic>> loginByAppleToken(
+    Map<String, dynamic> data,
+  ) {
+    return _httpManager.post(
+      '/admin/system/mobileApp/loginByAppleIdToken',
       data: data,
     );
   }

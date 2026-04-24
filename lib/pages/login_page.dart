@@ -3,7 +3,7 @@ import 'package:get/get.dart';
 import '../controllers/auth_controller.dart';
 import '../utils/constants.dart';
 import '../routes/app_routes.dart';
-import 'setting/reset_password_page.dart';
+import 'mine/setting/reset_password_page.dart';
 
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
@@ -197,8 +197,12 @@ class LoginPage extends StatelessWidget {
                             border: Border.all(color: borderColor),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Center(
-                            child: Text('', style: TextStyle(fontSize: 24)),
+                          child: Center(
+                            child: Image.asset(
+                              'assets/apple.png',
+                              width: 24,
+                              height: 24,
+                            ),
                           ),
                         ),
                       ),
@@ -213,14 +217,11 @@ class LoginPage extends StatelessWidget {
                             border: Border.all(color: borderColor),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Center(
-                            child: Text(
-                              'G',
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.red,
-                              ),
+                          child: Center(
+                            child: Image.asset(
+                              'assets/google.png',
+                              width: 24,
+                              height: 24,
                             ),
                           ),
                         ),
@@ -233,9 +234,10 @@ class LoginPage extends StatelessWidget {
               const SizedBox(height: 25),
 
               // 注册链接
-              Column(
+              Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
+                  Spacer(),
                   Text(
                     'start_journey'.tr,
                     textAlign: TextAlign.center,
@@ -248,6 +250,7 @@ class LoginPage extends StatelessWidget {
                       style: const TextStyle(color: primaryColor),
                     ),
                   ),
+                  Spacer(),
                 ],
               ),
             ],

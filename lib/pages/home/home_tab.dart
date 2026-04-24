@@ -4,7 +4,8 @@ import 'package:sunboxcloud/pages/home/animated_flow_chart.dart';
 import 'energy_flow_overlay.dart';
 import 'customize_indicators_dialog.dart';
 import '../../utils/constants.dart';
-import '../../utils/network/api_service.dart';
+import '../../controllers/station_controller.dart';
+import '../../model/station_model.dart';
 
 class HomeTab extends StatefulWidget {
   const HomeTab({super.key});
@@ -14,12 +15,7 @@ class HomeTab extends StatefulWidget {
 }
 
 class _HomeTabState extends State<HomeTab> {
-  // 站点列表
-  List<Map<String, dynamic>> _stationList = [];
-  // 当前选中的站点
-  Map<String, dynamic>? _selectedStation;
-  // 是否正在加载
-  bool _isLoadingStations = true;
+  final StationController controller = Get.find<StationController>();
 
   // 电池SOC百分比
   double batterySoc = 100;
@@ -113,33 +109,7 @@ class _HomeTabState extends State<HomeTab> {
   @override
   void initState() {
     super.initState();
-    _loadStationList();
-  }
-
-  Future<void> _loadStationList() async {
-    try {
-      final result = await ApiService.getStationList();
-      if (result['code'] == 200 && result['data'] != null) {
-        List<dynamic> data = result['data'];
-        setState(() {
-          _stationList = data
-              .map((e) => {'id': e['id'], 'stationName': e['stationName']})
-              .toList();
-          if (_stationList.isNotEmpty) {
-            _selectedStation = _stationList[0];
-          }
-          _isLoadingStations = false;
-        });
-      } else {
-        setState(() {
-          _isLoadingStations = false;
-        });
-      }
-    } catch (e) {
-      setState(() {
-        _isLoadingStations = false;
-      });
-    }
+    // 数据已由 StationController 管理，此处无需手动加载
   }
 
   void _showInfoTooltip(BuildContext context) {
@@ -218,11 +188,21 @@ class _HomeTabState extends State<HomeTab> {
         ),
       ),
       child: SafeArea(
-        child: _isLoadingStations
-            ? const Center(child: CircularProgressIndicator())
-            : _stationList.isEmpty
-            ? _buildEmptyState()
-            : _buildNormalContent(),
+        child: Obx(() {
+          if (controller.isStationsLoading.value &&
+              controller.stations.isEmpty) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (controller.stations.isEmpty) {
+            return _buildEmptyState();
+          }
+
+          return RefreshIndicator(
+            onRefresh: () => controller.fetchStations(),
+            child: _buildNormalContent(),
+          );
+        }),
       ),
     );
   }
@@ -267,8 +247,11 @@ class _HomeTabState extends State<HomeTab> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 GestureDetector(
-                  onTap: () {
-                    Get.toNamed('/distribution-network');
+                  onTap: () async {
+                    final result = await Get.toNamed('/distribution-network');
+                    if (result == true) {
+                      controller.fetchStations();
+                    }
                   },
                   child: Container(
                     padding: const EdgeInsets.symmetric(
@@ -319,67 +302,21 @@ class _HomeTabState extends State<HomeTab> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               // 选择站点按钮
-              PopupMenuButton<Map<String, dynamic>>(
+              PopupMenuButton<StationModel>(
                 onSelected: (station) {
-                  setState(() {
-                    _selectedStation = station;
-                  });
+                  controller.selectStation(station.id ?? '');
                 },
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
-                elevation: 8,
-                color: Colors.white,
-                itemBuilder: (context) {
-                  return _stationList.map((station) {
-                    final isSelected = _selectedStation?['id'] == station['id'];
-                    return PopupMenuItem<Map<String, dynamic>>(
-                      value: station,
-                      height: 48,
-                      padding: const EdgeInsets.symmetric(horizontal: 15),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? primaryColor.withValues(alpha: 0.1)
-                              : Colors.transparent,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                        child: Row(
-                          children: [
-                            Text(
-                              station['stationName'],
-                              style: TextStyle(
-                                color: isSelected ? primaryColor : textColor,
-                                fontWeight: isSelected
-                                    ? FontWeight.w600
-                                    : FontWeight.normal,
-                                fontSize: 15,
-                              ),
-                            ),
-                            const Spacer(),
-                            if (isSelected)
-                              Container(
-                                padding: const EdgeInsets.all(4),
-                                decoration: BoxDecoration(
-                                  color: primaryColor,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(
-                                  Icons.check,
-                                  color: Colors.white,
-                                  size: 12,
-                                ),
-                              ),
-                          ],
-                        ),
+                itemBuilder: (context) => controller.stations
+                    .map(
+                      (station) => PopupMenuItem<StationModel>(
+                        value: station,
+                        child: Text(station.stationName ?? ''),
                       ),
-                    );
-                  }).toList();
-                },
+                    )
+                    .toList(),
                 child: Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
@@ -393,7 +330,7 @@ class _HomeTabState extends State<HomeTab> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        _selectedStation?['stationName'] ?? '',
+                        controller.selectedStation?.stationName ?? '',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,

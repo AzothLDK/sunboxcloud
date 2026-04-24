@@ -10,7 +10,8 @@ import '../../utils/constants.dart';
 import '../../utils/storage.dart';
 import '../../utils/network/api_service.dart';
 import '../../utils/network/http_manager.dart' show host;
-import '../../pages/site_page.dart';
+import '../../utils/toast_utils.dart';
+import '../mine/my_site_page.dart';
 
 class MeTab extends StatefulWidget {
   const MeTab({super.key});
@@ -110,13 +111,7 @@ class _MeTabState extends State<MeTab> {
 
   Future<void> _uploadAvatar(File imageFile) async {
     if (_userId.isEmpty) {
-      Get.snackbar(
-        'error'.tr,
-        'user_id_not_found'.tr,
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withValues(alpha: 0.1),
-        colorText: Colors.red,
-      );
+      ToastUtils.error('user_id_not_found'.tr);
       return;
     }
 
@@ -137,7 +132,7 @@ class _MeTabState extends State<MeTab> {
       final response = await ApiService.editUser(formData);
 
       if (response['code'] == 200) {
-        final userInfoResponse = await ApiService.getLoginInfo();
+        final userInfoResponse = await ApiService.getSunboxLoginInfo();
         if (userInfoResponse['code'] == 200 &&
             userInfoResponse['data'] != null) {
           final userData = userInfoResponse['data'] as Map<String, dynamic>;
@@ -147,31 +142,13 @@ class _MeTabState extends State<MeTab> {
             _loadUserInfo();
           }
         }
-        Get.snackbar(
-          'success'.tr,
-          'avatar_updated'.tr,
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: primaryColor.withValues(alpha: 0.1),
-          colorText: primaryColor,
-        );
+        ToastUtils.success('avatar_updated'.tr);
       } else {
-        Get.snackbar(
-          'error'.tr,
-          response['msg'] ?? 'upload_failed'.tr,
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red.withValues(alpha: 0.1),
-          colorText: Colors.red,
-        );
+        ToastUtils.error(response['msg'] ?? 'upload_failed'.tr);
       }
     } catch (e) {
       developer.log('Upload avatar failed: $e', name: 'MeTab');
-      Get.snackbar(
-        'error'.tr,
-        'upload_failed'.tr,
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withValues(alpha: 0.1),
-        colorText: Colors.red,
-      );
+      ToastUtils.error('upload_failed'.tr);
     } finally {
       setState(() {
         _isUploading = false;

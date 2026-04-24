@@ -90,4 +90,31 @@ class GlobalStorage {
   static bool getIsAdmin() {
     return _sp.getBool("isAdmin") ?? false;
   }
+
+  // 保存语言设置
+  static Future<void> saveLanguage(int languageIndex) async {
+    _sp.setInt("language", languageIndex);
+  }
+
+  // 获取语言设置
+  static int getLanguage() {
+    return _sp.getInt("language") ?? 0;
+  }
+
+  static Future<void> saveSelectedStation(Map<String, dynamic> station) async {
+    String saveTemp = convert.jsonEncode(station);
+    _sp.setString("selectedStation", saveTemp);
+  }
+
+  static Map<String, dynamic>? getSelectedStation() {
+    var modelJson = _sp.getString("selectedStation");
+    if (modelJson != null) {
+      return convert.jsonDecode(modelJson);
+    }
+    return null;
+  }
+
+  static Future<void> clearSelectedStation() async {
+    _sp.remove("selectedStation");
+  }
 }

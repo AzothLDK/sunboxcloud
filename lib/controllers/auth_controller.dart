@@ -7,6 +7,8 @@ import 'package:sunboxcloud/services/social_auth_service.dart';
 import 'package:sunboxcloud/utils/network/crypto_util.dart';
 import '../utils/network/api_service.dart';
 import '../utils/storage.dart';
+import '../utils/toast_utils.dart';
+import 'station_controller.dart';
 
 class AuthController extends GetxController {
   // 登录表单
@@ -29,6 +31,9 @@ class AuthController extends GetxController {
   // 语言索引
   final currentLanguageIndex = 0.obs;
 
+  // 路由数据
+  final routers = <Map<String, dynamic>>[].obs;
+
   // 社交登录服务
   SocialAuthService? _socialAuthService;
 
@@ -48,16 +53,17 @@ class AuthController extends GetxController {
     // 加载保存的凭据
     _loadSavedCredentials();
 
-    // 根据当前语言设置初始化语言索引
-    final currentLocale = Get.locale;
-    if (currentLocale != null && currentLocale.languageCode == 'zh') {
-      currentLanguageIndex.value = 1;
-    } else {
-      currentLanguageIndex.value = 0;
-    }
+    // 从本地存储读取保存的语言设置
+    currentLanguageIndex.value = GlobalStorage.getLanguage();
 
     // 初始化社交登录服务
     _initSocialAuthService();
+
+    // 如果已登录，则初始化站点控制器
+    final token = GlobalStorage.getToken();
+    if (token != null && token.isNotEmpty) {
+      Get.put(StationController(), permanent: true);
+    }
   }
 
   void _initSocialAuthService() {
@@ -117,10 +123,9 @@ class AuthController extends GetxController {
   // 登录
   Future<void> login() async {
     if (email.value.trim().isEmpty || password.value.trim().isEmpty) {
-      Get.snackbar(
-        'login_failed'.tr,
+      ToastUtils.error(
         'please_enter_email_password'.tr,
-        snackPosition: SnackPosition.BOTTOM,
+        title: 'login_failed'.tr,
       );
       return;
     }
@@ -144,24 +149,19 @@ class AuthController extends GetxController {
         developer.log('Login successful: $response', name: 'AuthController');
         if (response['data'] != null) {
           GlobalStorage.saveToken(response['data']);
-        }
-
-        // 获取用户信息
-        try {
-          final userInfo = await ApiService.getLoginInfo();
-          developer.log('User Info: $userInfo', name: 'AuthController');
-          if (userInfo['code'] == 200 && userInfo['data'] != null) {
-            final userData = userInfo['data'] as Map<String, dynamic>;
-            final user = userData['user'] as Map<String, dynamic>?;
-            if (user != null) {
-              await GlobalStorage.saveLoginInfo(user);
-            }
+          // 登录成功后注入 StationController
+          if (Get.isRegistered<StationController>()) {
+            Get.find<StationController>().fetchStations(); // 如果已存在，手动刷新数据
+          } else {
+            Get.put(
+              StationController(),
+              permanent: true,
+            ); // 如果不存在，通过 put 触发 onInit
           }
-        } catch (e) {
-          developer.log('Failed to get user info: $e', name: 'AuthController');
         }
 
-        // 导航到主页
+        await fetchUserInfoAndRouters();
+
         Get.offNamed('/home');
         // 如果选择记住密码，则保存密码
         // if (rememberPassword) {
@@ -176,19 +176,14 @@ class AuthController extends GetxController {
         //   await GlobalStorage.deleteKeyValue('password');
         // }
       } else {
-        Get.snackbar(
-          'login_failed'.tr,
+        ToastUtils.error(
           response['msg'] ?? 'unknown_error'.tr,
-          snackPosition: SnackPosition.BOTTOM,
+          title: 'login_failed'.tr,
         );
       }
     } catch (e) {
       developer.log('Login Exception: $e', name: 'AuthController', error: e);
-      Get.snackbar(
-        'login_failed'.tr,
-        e.toString(),
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      ToastUtils.error(e.toString(), title: 'login_failed'.tr);
     } finally {
       isLoading.value = false;
     }
@@ -207,11 +202,7 @@ class AuthController extends GetxController {
   // 发送验证码
   Future<void> sendVerificationCode({String codeType = 'register'}) async {
     if (email.value.trim().isEmpty) {
-      Get.snackbar(
-        'error'.tr,
-        'please_enter_email'.tr,
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      ToastUtils.error('please_enter_email'.tr, title: 'error'.tr);
       return;
     }
 
@@ -223,17 +214,9 @@ class AuthController extends GetxController {
       });
 
       if (response['code'] == 200) {
-        Get.snackbar(
-          'success'.tr,
-          'verification_code_sent'.tr,
-          snackPosition: SnackPosition.BOTTOM,
-        );
+        ToastUtils.success('verification_code_sent'.tr);
       } else {
-        Get.snackbar(
-          'error'.tr,
-          response['msg'] ?? 'send_code_failed'.tr,
-          snackPosition: SnackPosition.BOTTOM,
-        );
+        ToastUtils.error(response['msg'] ?? 'send_code_failed'.tr);
       }
     } catch (e) {
       developer.log(
@@ -241,11 +224,7 @@ class AuthController extends GetxController {
         name: 'AuthController',
         error: e,
       );
-      Get.snackbar(
-        'error'.tr,
-        'send_code_failed'.tr,
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      ToastUtils.error('send_code_failed'.tr);
     } finally {
       isLoading.value = false;
     }
@@ -258,7 +237,8 @@ class AuthController extends GetxController {
         ? const Locale('en', 'US')
         : const Locale('zh', 'CN');
     Get.updateLocale(locale);
-    update(); // 通知UI更新
+    GlobalStorage.saveLanguage(index);
+    update();
   }
 
   // 获取翻译文本
@@ -266,14 +246,9 @@ class AuthController extends GetxController {
     return key.tr;
   }
 
-  // 苹果登录
   Future<void> loginWithApple() async {
     if (_socialAuthService == null) {
-      Get.snackbar(
-        'error'.tr,
-        'social_login_not_available'.tr,
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      ToastUtils.error('social_login_not_available'.tr);
       return;
     }
 
@@ -284,37 +259,69 @@ class AuthController extends GetxController {
       if (result != null) {
         developer.log('Apple login success: $result', name: 'AuthController');
 
-        // TODO: 将Apple登录凭证发送到后端进行验证
-        // final response = await ApiService.socialLogin({
-        //   'provider': 'apple',
-        //   'identityToken': result['identityToken'],
-        //   'userIdentifier': result['userIdentifier'],
-        //   'email': result['email'],
-        //   'givenName': result['givenName'],
-        //   'familyName': result['familyName'],
-        // });
+        final identityToken = result['identityToken'];
+        if (identityToken == null || identityToken.toString().isEmpty) {
+          ToastUtils.error('apple_token_not_found'.tr);
+          return;
+        }
 
-        // 模拟登录成功
-        Get.snackbar(
-          'success'.tr,
-          'apple_login_success'.tr,
-          snackPosition: SnackPosition.BOTTOM,
-        );
-        Get.offNamed('/home');
+        final response = await ApiService.loginByAppleToken({
+          'idToken': identityToken,
+        });
+
+        if (response['code'] == 200) {
+          developer.log(
+            'Apple backend login success: $response',
+            name: 'AuthController',
+          );
+
+          if (response['data'] != null) {
+            GlobalStorage.saveToken(response['data']);
+            // 登录成功后注入 StationController
+            if (Get.isRegistered<StationController>()) {
+              Get.find<StationController>().fetchStations(); // 如果已存在，手动刷新数据
+            } else {
+              Get.put(
+                StationController(),
+                permanent: true,
+              ); // 如果不存在，通过 put 触发 onInit
+            }
+          }
+
+          await fetchUserInfoAndRouters();
+
+          ToastUtils.success('apple_login_success'.tr);
+          Get.offNamed('/home');
+        } else if (response['code'] == 206) {
+          developer.log(
+            'Apple user not found, need to register',
+            name: 'AuthController',
+          );
+
+          final email = result['email'];
+          if (email == null || email.toString().isEmpty) {
+            ToastUtils.error('apple_email_not_found'.tr);
+            return;
+          }
+
+          ToastUtils.info('apple_user_need_register'.tr);
+
+          Get.toNamed('/apple-register', arguments: {'email': email});
+        } else {
+          ToastUtils.error(
+            response['msg'] ?? 'apple_login_failed'.tr,
+            title: 'login_failed'.tr,
+          );
+        }
       } else {
-        Get.snackbar(
-          'login_failed'.tr,
+        ToastUtils.warning(
           'apple_login_cancelled'.tr,
-          snackPosition: SnackPosition.BOTTOM,
+          title: 'login_failed'.tr,
         );
       }
     } catch (e) {
       developer.log('Apple login error: $e', name: 'AuthController', error: e);
-      Get.snackbar(
-        'login_failed'.tr,
-        e.toString(),
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      ToastUtils.error(e.toString(), title: 'login_failed'.tr);
     } finally {
       isLoading.value = false;
     }
@@ -323,11 +330,7 @@ class AuthController extends GetxController {
   // 谷歌登录
   Future<void> loginWithGoogle() async {
     if (_socialAuthService == null) {
-      Get.snackbar(
-        'error'.tr,
-        'social_login_not_available'.tr,
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      ToastUtils.error('social_login_not_available'.tr);
       return;
     }
 
@@ -340,15 +343,10 @@ class AuthController extends GetxController {
 
         final idToken = result['idToken'];
         if (idToken == null || idToken.toString().isEmpty) {
-          Get.snackbar(
-            'login_failed'.tr,
-            'google_token_invalid'.tr,
-            snackPosition: SnackPosition.BOTTOM,
-          );
+          ToastUtils.error('google_token_invalid'.tr, title: 'login_failed'.tr);
           return;
         }
 
-        // 调用后端谷歌登录接口
         final response = await ApiService.loginByGoogleToken({
           'access_token': idToken,
         });
@@ -359,33 +357,22 @@ class AuthController extends GetxController {
             name: 'AuthController',
           );
 
-          // 保存token
           if (response['data'] != null) {
             GlobalStorage.saveToken(response['data']);
-          }
-
-          // 获取用户信息
-          try {
-            final userInfo = await ApiService.getLoginInfo();
-            if (userInfo['code'] == 200 && userInfo['data'] != null) {
-              final userData = userInfo['data'] as Map<String, dynamic>;
-              final user = userData['user'] as Map<String, dynamic>?;
-              if (user != null) {
-                await GlobalStorage.saveLoginInfo(user);
-              }
+            // 登录成功后注入 StationController
+            if (Get.isRegistered<StationController>()) {
+              Get.find<StationController>().fetchStations(); // 如果已存在，手动刷新数据
+            } else {
+              Get.put(
+                StationController(),
+                permanent: true,
+              ); // 如果不存在，通过 put 触发 onInit
             }
-          } catch (e) {
-            developer.log(
-              'Failed to get user info: $e',
-              name: 'AuthController',
-            );
           }
 
-          Get.snackbar(
-            'success'.tr,
-            'google_login_success'.tr,
-            snackPosition: SnackPosition.BOTTOM,
-          );
+          await fetchUserInfoAndRouters();
+
+          ToastUtils.success('google_login_success'.tr);
           Get.offNamed('/home');
         } else if (response['code'] == 206) {
           developer.log(
@@ -395,50 +382,112 @@ class AuthController extends GetxController {
 
           final email = result['email'];
           if (email == null || email.toString().isEmpty) {
-            Get.snackbar(
-              'error'.tr,
-              'google_email_not_found'.tr,
-              snackPosition: SnackPosition.BOTTOM,
-            );
+            ToastUtils.error('google_email_not_found'.tr);
             return;
           }
 
-          Get.snackbar(
-            'info'.tr,
-            'google_user_need_register'.tr,
-            snackPosition: SnackPosition.BOTTOM,
-          );
+          ToastUtils.info('google_user_need_register'.tr);
 
           Get.toNamed('/google-register', arguments: {'email': email});
         } else {
-          Get.snackbar(
-            'login_failed'.tr,
+          ToastUtils.error(
             response['msg'] ?? 'google_login_failed'.tr,
-            snackPosition: SnackPosition.BOTTOM,
+            title: 'login_failed'.tr,
           );
         }
       } else {
-        Get.snackbar(
-          'login_failed'.tr,
+        ToastUtils.warning(
           'google_login_cancelled'.tr,
-          snackPosition: SnackPosition.BOTTOM,
+          title: 'login_failed'.tr,
         );
       }
     } catch (e) {
       developer.log('Google login error: $e', name: 'AuthController', error: e);
-      Get.snackbar(
-        'login_failed'.tr,
-        e.toString(),
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      ToastUtils.error(e.toString(), title: 'login_failed'.tr);
     } finally {
       isLoading.value = false;
     }
   }
 
+  Future<void> fetchUserInfoAndRouters() async {
+    try {
+      final userInfo = await ApiService.getSunboxLoginInfo();
+      developer.log('User Info: $userInfo', name: 'AuthController');
+      if (userInfo['code'] == 200 && userInfo['data'] != null) {
+        final userData = userInfo['data'] as Map<String, dynamic>;
+        final user = userData['user'] as Map<String, dynamic>?;
+        if (user != null) {
+          await GlobalStorage.saveLoginInfo(user);
+        }
+
+        List<dynamic> sysApps = userData['sysApps'] ?? [];
+        bool foundAppId = false;
+
+        for (var app in sysApps) {
+          if (app is Map<String, dynamic> && app['appCode'] == 'sunbox-h-app') {
+            String appId = app['appId'] ?? '';
+            if (appId.isNotEmpty) {
+              await GlobalStorage.saveAppId(appId);
+              await fetchRouters();
+              developer.log('成功保存appId: $appId', name: 'AuthController');
+              foundAppId = true;
+              break;
+            }
+          }
+        }
+
+        if (!foundAppId) {
+          await fetchRouters();
+          developer.log('未找到有效的SunCloud_APP应用配置', name: 'AuthController');
+        }
+      }
+    } catch (e) {
+      developer.log('Failed to get user info: $e', name: 'AuthController');
+    }
+  }
+
+  Future<void> fetchRouters() async {
+    try {
+      String? appId = GlobalStorage.getAppId();
+      if (appId == null) {
+        developer.log('appId为空,无法获取路由', name: 'AuthController');
+        routers.clear();
+        return;
+      }
+
+      var response = await ApiService.getRouters({'appId': appId});
+
+      if (response['code'] == 200 && response.containsKey('data')) {
+        developer.log('Routers response: $response', name: 'AuthController');
+
+        List<dynamic> routerList = response['data'] ?? [];
+        routers.value = routerList.cast<Map<String, dynamic>>();
+
+        developer.log(
+          'Routers loaded: ${routers.length}',
+          name: 'AuthController',
+        );
+      } else {
+        developer.log('获取路由失败: ${response['msg']}', name: 'AuthController');
+      }
+    } catch (e) {
+      developer.log('获取路由失败: $e', name: 'AuthController', error: e);
+    }
+  }
+
   // 登出
   Future<void> logout() async {
+    // 调用社交登录服务的登出逻辑（如 Google / Apple 登出）
+    if (_socialAuthService != null) {
+      await _socialAuthService!.signOutFromGoogle();
+      await _socialAuthService!.signOutFromApple();
+    }
+
     await GlobalStorage.clearUserInfo();
+    // if (Get.isRegistered<StationController>()) {
+    //    Get.delete<StationController>(); // 登出时销毁，下次登录才会重新 onInit
+    //   Get.reset();
+    // }
     Get.offAllNamed('/login');
   }
 
@@ -454,7 +503,7 @@ class AuthController extends GetxController {
           'password': credentials['password'] ?? '',
         };
       } catch (e) {
-        print('解析保存的凭证失败: $e');
+        developer.log('解析保存的凭证失败: $e', name: 'AuthController', error: e);
         return null;
       }
     }

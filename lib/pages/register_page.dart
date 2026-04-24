@@ -7,6 +7,7 @@ import 'package:sunboxcloud/utils/network/crypto_util.dart';
 import '../utils/constants.dart';
 import '../utils/network/api_service.dart';
 import '../routes/app_routes.dart';
+import '../utils/toast_utils.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -54,9 +55,15 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   bool _isPasswordValid(String password) {
+    final hasValidChars = RegExp(
+      r'^[A-Za-z0-9!@#$%^&*(),.?":{}|<>]+$',
+    ).hasMatch(password);
     return password.length >= minPasswordLength &&
         RegExp(r'[A-Z]').hasMatch(password) &&
-        RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(password);
+        RegExp(r'[a-z]').hasMatch(password) &&
+        RegExp(r'[0-9]').hasMatch(password) &&
+        RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(password) &&
+        hasValidChars;
   }
 
   void _startCountdown() {
@@ -77,13 +84,7 @@ class _RegisterPageState extends State<RegisterPage> {
   Future<void> _sendVerificationCode() async {
     final email = _emailController.text.trim();
     if (!_isValidEmail(email)) {
-      Get.snackbar(
-        'error'.tr,
-        'please_enter_valid_email'.tr,
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withValues(alpha: 0.1),
-        colorText: Colors.red,
-      );
+      ToastUtils.error('please_enter_valid_email'.tr);
       return;
     }
 
@@ -100,35 +101,20 @@ class _RegisterPageState extends State<RegisterPage> {
       if (response['code'] == 200) {
         final data = response['data'] as Map<String, dynamic>?;
         final returnedEmail = data?['email'] as String? ?? email;
+        for (var controller in _codeControllers) {
+          controller.clear();
+        }
         setState(() {
           _verifiedEmail = returnedEmail;
           _currentStep = 1;
         });
         _startCountdown();
-        Get.snackbar(
-          'success'.tr,
-          'verification_code_sent'.tr,
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: primaryColor.withValues(alpha: 0.1),
-          colorText: primaryColor,
-        );
+        ToastUtils.success('verification_code_sent'.tr);
       } else {
-        Get.snackbar(
-          'error'.tr,
-          response['msg'] ?? 'send_code_failed'.tr,
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red.withValues(alpha: 0.1),
-          colorText: Colors.red,
-        );
+        ToastUtils.error(response['msg'] ?? 'send_code_failed'.tr);
       }
     } catch (e) {
-      Get.snackbar(
-        'error'.tr,
-        'send_code_failed'.tr,
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withValues(alpha: 0.1),
-        colorText: Colors.red,
-      );
+      ToastUtils.error('send_code_failed'.tr);
     } finally {
       setState(() {
         _isLoading = false;
@@ -151,13 +137,7 @@ class _RegisterPageState extends State<RegisterPage> {
   Future<void> _verifyCode() async {
     final code = _codeControllers.map((c) => c.text).join();
     if (code.length != 6) {
-      Get.snackbar(
-        'error'.tr,
-        'please_enter_6_digit_code'.tr,
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withValues(alpha: 0.1),
-        colorText: Colors.red,
-      );
+      ToastUtils.error('please_enter_6_digit_code'.tr);
       return;
     }
 
@@ -183,22 +163,10 @@ class _RegisterPageState extends State<RegisterPage> {
           _currentStep = 2;
         });
       } else {
-        Get.snackbar(
-          'error'.tr,
-          response['msg'] ?? 'verification_failed'.tr,
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red.withValues(alpha: 0.1),
-          colorText: Colors.red,
-        );
+        ToastUtils.error(response['msg'] ?? 'verification_failed'.tr);
       }
     } catch (e) {
-      Get.snackbar(
-        'error'.tr,
-        'verification_failed'.tr,
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withValues(alpha: 0.1),
-        colorText: Colors.red,
-      );
+      ToastUtils.error('verification_failed'.tr);
     } finally {
       setState(() {
         _isLoading = false;
@@ -211,24 +179,12 @@ class _RegisterPageState extends State<RegisterPage> {
     final confirmPassword = _confirmPasswordController.text;
 
     if (!_isPasswordValid(password)) {
-      Get.snackbar(
-        'error'.tr,
-        'password_requirements_not_met'.tr,
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withValues(alpha: 0.1),
-        colorText: Colors.red,
-      );
+      ToastUtils.error('password_requirements_not_met'.tr);
       return;
     }
 
     if (password != confirmPassword) {
-      Get.snackbar(
-        'error'.tr,
-        'passwords_do_not_match'.tr,
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withValues(alpha: 0.1),
-        colorText: Colors.red,
-      );
+      ToastUtils.error('passwords_do_not_match'.tr);
       return;
     }
 
@@ -270,22 +226,10 @@ class _RegisterPageState extends State<RegisterPage> {
           barrierDismissible: false,
         );
       } else {
-        Get.snackbar(
-          'error'.tr,
-          response['msg'] ?? 'register_failed'.tr,
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red.withValues(alpha: 0.1),
-          colorText: Colors.red,
-        );
+        ToastUtils.error(response['msg'] ?? 'register_failed'.tr);
       }
     } catch (e) {
-      Get.snackbar(
-        'error'.tr,
-        'register_failed'.tr,
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withValues(alpha: 0.1),
-        colorText: Colors.red,
-      );
+      ToastUtils.error('register_failed'.tr);
     } finally {
       setState(() {
         _isLoading = false;
@@ -305,6 +249,17 @@ class _RegisterPageState extends State<RegisterPage> {
           onPressed: () {
             if (_currentStep > 0) {
               setState(() {
+                if (_currentStep == 2) {
+                  for (var controller in _codeControllers) {
+                    controller.clear();
+                  }
+                  _passwordController.clear();
+                  _confirmPasswordController.clear();
+                } else if (_currentStep == 1) {
+                  for (var controller in _codeControllers) {
+                    controller.clear();
+                  }
+                }
                 _currentStep--;
               });
             } else {
@@ -580,6 +535,7 @@ class _RegisterPageState extends State<RegisterPage> {
           child: TextField(
             controller: _passwordController,
             obscureText: !_isPasswordVisible,
+            onChanged: (value) => setState(() {}),
             decoration: InputDecoration(
               hintText: 'enter_password'.tr,
               hintStyle: TextStyle(color: textLightColor),
@@ -620,6 +576,7 @@ class _RegisterPageState extends State<RegisterPage> {
           child: TextField(
             controller: _confirmPasswordController,
             obscureText: !_isConfirmPasswordVisible,
+            onChanged: (value) => setState(() {}),
             decoration: InputDecoration(
               hintText: 'enter_confirm_password'.tr,
               hintStyle: TextStyle(color: textLightColor),
@@ -683,6 +640,13 @@ class _RegisterPageState extends State<RegisterPage> {
 
   Widget _buildPasswordRequirements() {
     final password = _passwordController.text;
+    final confirmPassword = _confirmPasswordController.text;
+    final hasConfirmPassword = confirmPassword.isNotEmpty;
+    final passwordsMatch = password == confirmPassword && hasConfirmPassword;
+    final hasValidChars =
+        RegExp(r'^[A-Za-z0-9!@#$%^&*(),.?":{}|<>]+$').hasMatch(password) ||
+        password.isEmpty;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -707,14 +671,30 @@ class _RegisterPageState extends State<RegisterPage> {
           ),
           const SizedBox(height: 8),
           _buildRequirement(
+            RegExp(r'[a-z]').hasMatch(password),
+            'password_lowercase'.tr,
+          ),
+          const SizedBox(height: 8),
+          _buildRequirement(
             RegExp(r'[A-Z]').hasMatch(password),
             'password_uppercase'.tr,
+          ),
+          const SizedBox(height: 8),
+          _buildRequirement(
+            RegExp(r'[0-9]').hasMatch(password),
+            'password_numbers'.tr,
           ),
           const SizedBox(height: 8),
           _buildRequirement(
             RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(password),
             'password_special'.tr,
           ),
+          const SizedBox(height: 8),
+          _buildRequirement(hasValidChars, 'password_valid_chars'.tr),
+          if (hasConfirmPassword) ...[
+            const SizedBox(height: 8),
+            _buildRequirement(passwordsMatch, 'passwords_match'.tr),
+          ],
         ],
       ),
     );
@@ -729,11 +709,13 @@ class _RegisterPageState extends State<RegisterPage> {
           size: 18,
         ),
         const SizedBox(width: 10),
-        Text(
-          text,
-          style: TextStyle(
-            fontSize: 13,
-            color: isMet ? successColor : textLightColor,
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+              fontSize: 13,
+              color: isMet ? successColor : textLightColor,
+            ),
           ),
         ),
       ],

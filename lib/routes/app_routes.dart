@@ -2,23 +2,25 @@ import 'package:get/get.dart';
 import '../pages/login_page.dart';
 import '../pages/register_page.dart';
 import '../pages/google_register_page.dart';
-import '../pages/complete_profile_page.dart';
-import '../pages/setting/language_page.dart';
+import '../pages/mine/complete_profile_page.dart';
+import '../pages/mine/setting/language_page.dart';
 import '../pages/home/home_page.dart';
-import '../pages/backup_reserve_page.dart';
-import '../pages/my_devices_page.dart';
-import '../pages/feedback/feedback_page.dart';
-import '../pages/feedback/new_ticket_page.dart';
-import '../pages/setting/settings_page.dart';
-import '../pages/setting/privacy_policy_page.dart';
-import '../pages/setting/app_update_page.dart';
-import '../pages/setting/notification_settings_page.dart';
-import '../pages/setting/account_page.dart';
-import '../pages/setting/reset_password_page.dart';
-import '../pages/setting/change_email_page.dart';
-import '../pages/setting/edit_field_page.dart';
-import '../pages/notifications_page.dart';
+import '../pages/device/backup_reserve_page.dart';
+import '../pages/mine/my_devices_page.dart';
+import '../pages/mine/feedback/feedback_page.dart';
+import '../pages/mine/feedback/new_ticket_page.dart';
+import '../pages/mine/setting/settings_page.dart';
+import '../pages/mine/setting/privacy_policy_page.dart';
+import '../pages/mine/setting/app_update_page.dart';
+import '../pages/mine/setting/notification_settings_page.dart';
+import '../pages/mine/setting/account_page.dart';
+import '../pages/mine/setting/reset_password_page.dart';
+import '../pages/mine/setting/change_email_page.dart';
+import '../pages/mine/setting/edit_field_page.dart';
+import '../pages/mine/setting/notifications_page.dart';
 import '../pages/distributionNetwork/distributionNetwork_page.dart';
+import '../pages/distributionNetwork/scan_page.dart';
+import '../pages/mine/device_detail_page.dart';
 
 class AppRoutes {
   static const String login = '/login';
@@ -39,7 +41,9 @@ class AppRoutes {
   static const String resetPassword = '/reset-password';
   static const String notifications = '/notifications';
   static const String distributionNetwork = '/distribution-network';
+  static const String scan = '/scan';
   static const String changeEmail = '/change-email';
+  static const String deviceDetail = '/device-detail';
 
   static final routes = [
     GetPage(
@@ -133,8 +137,18 @@ class AppRoutes {
       transition: Transition.fade,
     ),
     GetPage(
+      name: scan,
+      page: () => const ScanPage(),
+      transition: Transition.fade,
+    ),
+    GetPage(
       name: changeEmail,
       page: () => const ChangeEmailPage(),
+      transition: Transition.fade,
+    ),
+    GetPage(
+      name: deviceDetail,
+      page: () => const DeviceDetailPage(),
       transition: Transition.fade,
     ),
   ];

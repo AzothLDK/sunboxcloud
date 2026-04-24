@@ -8,13 +8,20 @@ import 'utils/storage.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await GlobalStorage.getInstance(); // 初始化 SharedPreferences
+  await GlobalStorage.getInstance();
   Get.put(AuthController());
   runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
+
+  Locale _getSavedLocale() {
+    final languageIndex = GlobalStorage.getLanguage();
+    return languageIndex == 0
+        ? const Locale('en', 'US')
+        : const Locale('zh', 'CN');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -51,7 +58,7 @@ class MyApp extends StatelessWidget {
         ),
       ),
       translations: Messages(),
-      locale: const Locale('en', 'US'),
+      locale: _getSavedLocale(),
       fallbackLocale: const Locale('zh', 'CN'),
       initialRoute: AppRoutes.login,
       getPages: AppRoutes.routes,

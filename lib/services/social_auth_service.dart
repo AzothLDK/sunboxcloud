@@ -5,6 +5,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:sunboxcloud/utils/network/api_service.dart';
 import 'package:sunboxcloud/utils/storage.dart';
+import 'package:sunboxcloud/controllers/auth_controller.dart';
 
 class SocialAuthService extends GetxService {
   static SocialAuthService get to => Get.find();
@@ -39,36 +40,28 @@ class SocialAuthService extends GetxService {
       final result = await GoogleSignIn.instance
           .attemptLightweightAuthentication();
       if (result != null) {
-        // 获取 idToken（可能为 null，如果 token 已过期或无法刷新）
-        final idToken = await result.authentication.idToken;
+        // Get idToken
+        final auth = result.authentication;
+        final idToken = auth.idToken;
 
         if (idToken != null) {
           final response = await ApiService.loginByGoogleToken({
             'access_token': idToken,
           });
           if (response['code'] == 200) {
-            // 保存token
             if (response['data'] != null) {
               GlobalStorage.saveToken(response['data']);
             }
-            // // 获取用户信息
-            // try {
-            //   final userInfo = await ApiService.getLoginInfo();
-            //   if (userInfo['code'] == 200 && userInfo['data'] != null) {
-            //     final userData = userInfo['data'] as Map<String, dynamic>;
-            //     final user = userData['user'] as Map<String, dynamic>?;
-            //     if (user != null) {
-            //       await GlobalStorage.saveLoginInfo(user);
-            //     }
-            //   }
-            // } catch (e) {
-            //   developer.log(
-            //     'Failed to get user info: $e',
-            //     name: 'AuthController',
-            //   );
-            // }
 
-            // 自动登录成功，跳转首页
+            AuthController authController;
+            try {
+              authController = Get.find<AuthController>();
+            } catch (e) {
+              authController = Get.put(AuthController());
+            }
+
+            await authController.fetchUserInfoAndRouters();
+
             Get.offAllNamed('/home');
           }
         }
@@ -101,11 +94,8 @@ class SocialAuthService extends GetxService {
 
       _currentUser = googleUser;
 
-      final idToken = await _currentUser!.authentication.idToken;
-      // final idToken = auth.idToken;
+      final googleAuth = await googleUser.authentication;
 
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
       final result = {
         'id': googleUser.id,
         'email': googleUser.email,
@@ -115,17 +105,30 @@ class SocialAuthService extends GetxService {
       };
 
       developer.log(
-        'Google sign in成功 success: $result',
+        'Google sign in success: $result',
         name: 'SocialAuthService',
       );
       return result;
+    } on GoogleSignInException catch (e) {
+      if (e.code == GoogleSignInExceptionCode.canceled) {
+        developer.log(
+          'Google sign in cancelled by user',
+          name: 'SocialAuthService',
+        );
+      } else {
+        developer.log(
+          'Google sign in error: ${e.code} - ${e.description}',
+          name: 'SocialAuthService',
+          error: e,
+        );
+      }
+      return null;
     } catch (e) {
       developer.log(
         'Google sign in error: $e',
         name: 'SocialAuthService',
         error: e,
       );
-      // 捕获配置错误，防止应用崩溃
       return null;
     } finally {
       isLoading.value = false;
@@ -177,6 +180,20 @@ class SocialAuthService extends GetxService {
     } catch (e) {
       developer.log(
         'Google sign out error: $e',
+        name: 'SocialAuthService',
+        error: e,
+      );
+    }
+  }
+
+  Future<void> signOutFromApple() async {
+    try {
+      // Apple does not have a formal programmatic "sign out" method that invalidates sessions
+      // from the client side like Google does. We just clear any local states if we had any.
+      developer.log('Apple sign out success', name: 'SocialAuthService');
+    } catch (e) {
+      developer.log(
+        'Apple sign out error: $e',
         name: 'SocialAuthService',
         error: e,
       );
