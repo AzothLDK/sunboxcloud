@@ -12,6 +12,7 @@ const Color textLightColor = Color(0xFF757575);
 const Color borderColor = Color(0xFFE0E0E0);
 const Color successColor = Color(0xFF4CAF50);
 const Color errorColor = Color(0xFFF44336);
+const Color solarColor = Color(0xFFFF9800);
 
 // 动画时长
 const Duration animationDuration = Duration(milliseconds: 300);

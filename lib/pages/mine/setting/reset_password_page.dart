@@ -3,6 +3,7 @@ import 'dart:convert' as convert;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import '../../../controllers/auth_controller.dart';
 import '../../../utils/constants.dart';
 import '../../../utils/network/api_service.dart';
 import '../../../utils/network/crypto_util.dart';
@@ -35,6 +36,20 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
 
   String _verifiedEmail = '';
   String _userId = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserEmail();
+  }
+
+  void _loadUserEmail() {
+    if (Get.isRegistered<AuthController>()) {
+      final authController = Get.find<AuthController>();
+      final email = authController.userInfo.value?['email'] as String? ?? '';
+      _emailController.text = email;
+    }
+  }
 
   @override
   void dispose() {
@@ -207,21 +222,78 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
 
       if (response['code'] == 200) {
         Get.dialog(
-          AlertDialog(
-            title: Text('success'.tr),
-            content: Text('password_reset_success'.tr),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Get.back();
-                  Get.back();
-                },
-                child: Text(
-                  'confirm'.tr,
-                  style: TextStyle(color: primaryColor),
-                ),
+          Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            backgroundColor: Colors.white,
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: primaryColor.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.check_circle_outline,
+                      color: primaryColor,
+                      size: 32,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'success'.tr,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: textColor,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'password_reset_success'.tr,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: textLightColor,
+                      height: 1.5,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 28),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Get.back();
+                        final authController = Get.find<AuthController>();
+                        authController.logout();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryColor,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        'confirm'.tr,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
           barrierDismissible: false,
         );
@@ -298,16 +370,20 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
           TextField(
             controller: _emailController,
             keyboardType: TextInputType.emailAddress,
+            readOnly: true,
+            style: const TextStyle(color: textLightColor),
             decoration: InputDecoration(
               hintText: 'enter_email'.tr,
               hintStyle: TextStyle(color: textLightColor),
+              filled: true,
+              fillColor: const Color(0xFFEEEEEE),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: const BorderSide(color: borderColor),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: primaryColor),
+                borderSide: const BorderSide(color: borderColor),
               ),
               prefixIcon: const Icon(Icons.email, color: textLightColor),
             ),

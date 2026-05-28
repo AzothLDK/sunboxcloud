@@ -6,6 +6,7 @@ import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:get/get.dart' hide Response, FormData, MultipartFile;
 import 'package:sunboxcloud/controllers/auth_controller.dart';
 import 'package:sunboxcloud/utils/storage.dart';
+import 'package:sunboxcloud/utils/toast_utils.dart';
 
 String _getAcceptLanguage() {
   final locale = Get.locale;
@@ -24,9 +25,11 @@ Future<String> _getTimezone() async {
   }
 }
 
-const String host = "http://192.168.1.181:30742/";
+// const String host = "http://192.168.1.181:30742/";
 
 // const String host = "http://192.168.20.182:8001/";
+
+const String host = "http://58.214.25.130:10880/";
 
 class HttpManager {
   // 单例模式
@@ -37,8 +40,8 @@ class HttpManager {
   late Dio _dio;
 
   static const String baseUrl = host; // API基础URL
-  static const int connectTimeout = 5000; // 连接超时时间（毫秒）
-  static const int receiveTimeout = 5000; // 接收超时时间（毫秒）
+  static const int connectTimeout = 10000; // 连接超时时间（毫秒）
+  static const int receiveTimeout = 10000; // 接收超时时间（毫秒）
 
   HttpManager._internal() {
     // 初始化Dio
@@ -82,10 +85,10 @@ class HttpManager {
     if (kDebugMode) {
       _dio.interceptors.add(
         LogInterceptor(
-          request: true,
+          request: false,
           requestHeader: true,
-          requestBody: true,
-          responseHeader: true,
+          requestBody: false,
+          responseHeader: false,
           responseBody: true,
           error: true,
           logPrint: (Object object) {
@@ -249,8 +252,11 @@ class HttpManager {
     if (response.statusCode == 200) {
       if (response.data is Map<String, dynamic>) {
         final data = response.data as Map<String, dynamic>;
-        // 处理认证失败或Token过期
-        if (data['code'] == 401) {
+        // 处理认证失败、Token过期或账号锁定
+        if (data['code'] == 401 || data['code'] == 403) {
+          if (data['code'] == 403 && data['msg'] != null) {
+            ToastUtils.error(data['msg']);
+          }
           _handleTokenExpired();
         }
         return data;
@@ -274,7 +280,10 @@ class HttpManager {
     // 尝试从后端的错误响应中获取 msg (如认证失败的情况)
     if (error.response != null && error.response?.data is Map) {
       final responseData = error.response?.data as Map;
-      if (responseData['code'] == 401) {
+      if (responseData['code'] == 401 || responseData['code'] == 403) {
+        if (responseData['code'] == 403 && responseData['msg'] != null) {
+          ToastUtils.error(responseData['msg']);
+        }
         _handleTokenExpired();
         return responseData as Map<String, dynamic>;
       }
@@ -331,15 +340,17 @@ class HttpManager {
     try {
       if (Get.isRegistered<AuthController>()) {
         final authController = Get.find<AuthController>();
-        // 调用 logout 方法或其他清理操作
-        // authController.logout();
+        // 清理信息并跳转到登录页
+        authController.logout();
         developer.log(
-          'Found AuthController, ready to handle expiration',
+          'Token expired: Logged out and redirected to login',
           name: 'HttpManager',
         );
+      } else {
+        // 如果控制器没注册，强制清理存储并跳转
+        GlobalStorage.clearUserInfo();
+        Get.offAllNamed('/login');
       }
-      // 这里可选择是否自动弹窗提示
-      // Get.snackbar('login_expired'.tr, 'please_login_again'.tr);
     } catch (e) {
       developer.log('Error handling token expiration: $e', name: 'HttpManager');
     }

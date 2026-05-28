@@ -10,7 +10,12 @@ class BackupReservePage extends StatefulWidget {
 }
 
 class _BackupReservePageState extends State<BackupReservePage> {
-  double _progress = 0.2; // 初始值 20%
+  bool _isEnabled = true;
+  double _progress = 0.1; // 初始值 10% (0.05 到 0.5)
+
+  // 定义 SOC 的范围
+  final double _minSoc = 0.05;
+  final double _maxSoc = 0.5;
 
   @override
   Widget build(BuildContext context) {
@@ -26,8 +31,8 @@ class _BackupReservePageState extends State<BackupReservePage> {
           },
         ),
         title: Text(
-          'Backup Reserve',
-          style: TextStyle(
+          'BSU Protection'.tr,
+          style: const TextStyle(
             color: textColor,
             fontSize: 18,
             fontWeight: FontWeight.w600,
@@ -35,195 +40,267 @@ class _BackupReservePageState extends State<BackupReservePage> {
         ),
       ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // 卡片容器
-              Card(
-                elevation: 2,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // 标题和描述
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.battery_charging_full,
-                            color: primaryColor,
-                            size: 24,
-                          ),
-                          const SizedBox(width: 12),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Backup Reserve',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: textColor,
-                                ),
-                              ),
-                              Text(
-                                'Reserve Energy for Grid Outages.',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: textLightColor,
-                                ),
-                              ),
-                            ],
+        child: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  children: [
+                    // 卡片容器
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 40),
-
-                      // 直线进度条
-                      Center(
-                        child: Container(
-                          width: 300,
-                          child: Column(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // 顶部开关行
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              // 进度条容器
-                              Stack(
-                                children: [
-                                  // 背景线
-                                  Container(
-                                    height: 8,
-                                    decoration: BoxDecoration(
-                                      color: Colors.grey[200],
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                  ),
-                                  // 进度线
-                                  Container(
-                                    height: 8,
-                                    width: 300 * _progress,
-                                    decoration: BoxDecoration(
-                                      color: primaryColor,
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                  ),
-                                  // 推荐线 (20%)
-                                  Positioned(
-                                    left: 300 * 0.2 - 1,
-                                    top: -4,
-                                    bottom: -4,
-                                    child: Container(
-                                      width: 2,
-                                      color: primaryColor,
-                                    ),
-                                  ),
-                                  // 拖动指示器
-                                  Positioned(
-                                    left: 300 * _progress - 8,
-                                    top: -8,
-                                    child: GestureDetector(
-                                      onPanUpdate: (details) {
-                                        double newProgress =
-                                            (details.localPosition.dx + 8) /
-                                            300;
-                                        newProgress = newProgress.clamp(
-                                          0.0,
-                                          1.0,
-                                        );
-                                        setState(() {
-                                          _progress = newProgress;
-                                        });
-                                      },
-                                      child: Container(
-                                        width: 16,
-                                        height: 16,
-                                        decoration: BoxDecoration(
-                                          color: primaryColor,
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: primaryColor.withOpacity(
-                                                0.3,
-                                              ),
-                                              spreadRadius: 2,
-                                              blurRadius: 4,
-                                              offset: const Offset(0, 2),
-                                            ),
-                                          ],
-                                        ),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'enable_low_battery_protection'.tr,
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        color: textColor,
                                       ),
                                     ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 16),
-                              // 刻度线和标签
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  for (int i = 0; i <= 5; i++)
-                                    Column(
-                                      children: [
-                                        Container(
-                                          width: 1,
-                                          height: 8,
-                                          color: Colors.grey[400],
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          '${i * 20}%',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: textLightColor,
-                                          ),
-                                        ),
-                                      ],
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'low_battery_protection_desc'.tr,
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        color: textLightColor,
+                                      ),
                                     ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              // 推荐标签
-                              Align(
-                                alignment: Alignment.centerLeft,
-                                child: Padding(
-                                  padding: const EdgeInsets.only(left: 60 - 25),
-                                  child: Text(
-                                    'Recommended',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: primaryColor,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
+                                  ],
                                 ),
                               ),
-                              const SizedBox(height: 40),
-                              // 中心百分比
-                              Text(
-                                '${(_progress * 100).round()}%',
-                                style: TextStyle(
-                                  fontSize: 48,
-                                  fontWeight: FontWeight.bold,
-                                  color: textColor,
-                                ),
+                              Switch(
+                                value: _isEnabled,
+                                activeColor: primaryColor,
+                                onChanged: (val) {
+                                  setState(() {
+                                    _isEnabled = val;
+                                  });
+                                },
                               ),
                             ],
                           ),
-                        ),
+
+                          // 当开关打开时显示下方内容
+                          if (_isEnabled) ...[
+                            const SizedBox(height: 32),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'lock_soc_threshold'.tr,
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    color: textLightColor,
+                                  ),
+                                ),
+                                Text(
+                                  '${(_progress * 100).round()}%',
+                                  style: const TextStyle(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                    color: textColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            _buildSlider(),
+                            const SizedBox(height: 24),
+                            _buildHintBox(),
+                          ],
+                        ],
                       ),
-                    ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            // 底部确认按钮
+            Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Get.back();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primaryColor,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(25),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: Text(
+                    'confirm'.tr,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildSlider() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final double trackWidth = constraints.maxWidth;
+        // 计算视觉上的进度比例 (0.0 到 1.0)
+        final double visualProgress =
+            ((_progress - _minSoc) / (_maxSoc - _minSoc)).clamp(0.0, 1.0);
+
+        return Column(
+          children: [
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onHorizontalDragUpdate: (details) {
+                setState(() {
+                  // 将拖动位置转换为 SOC 值
+                  final double ratio = (details.localPosition.dx / trackWidth)
+                      .clamp(0.0, 1.0);
+                  _progress = _minSoc + ratio * (_maxSoc - _minSoc);
+                });
+              },
+              onTapDown: (details) {
+                setState(() {
+                  final double ratio = (details.localPosition.dx / trackWidth)
+                      .clamp(0.0, 1.0);
+                  _progress = _minSoc + ratio * (_maxSoc - _minSoc);
+                });
+              },
+              child: Container(
+                height: 32,
+                alignment: Alignment.center,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    // 背景轨道
+                    Container(
+                      height: 6,
+                      width: trackWidth,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    ),
+                    // 浅色填充（可选，这里保持原有逻辑或微调）
+                    Container(
+                      height: 6,
+                      width: trackWidth,
+                      decoration: BoxDecoration(
+                        color: primaryColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    ),
+                    // 实际进度条
+                    Positioned(
+                      left: 0,
+                      child: Container(
+                        height: 6,
+                        width: trackWidth * visualProgress,
+                        decoration: BoxDecoration(
+                          color: primaryColor,
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                      ),
+                    ),
+                    // 滑块按钮
+                    Positioned(
+                      left: trackWidth * visualProgress - 12,
+                      top: -9,
+                      child: Container(
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: primaryColor, width: 3),
+                          boxShadow: [
+                            BoxShadow(
+                              color: primaryColor.withOpacity(0.2),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                for (var val in ['5%', '15%', '25%', '35%', '50%'])
+                  Text(
+                    val,
+                    style: const TextStyle(fontSize: 12, color: Colors.black26),
+                  ),
+              ],
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildHintBox() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFBE6),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFFFE58F)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.info, color: Color(0xFFFAAD14), size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'low_battery_protection_hint'.tr,
+              style: const TextStyle(
+                fontSize: 13,
+                color: Color(0xFF856404),
+                height: 1.6,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -13,61 +13,60 @@ class LanguagePage extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: backgroundColor,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: textColor),
+          onPressed: () => Get.back(),
+        ),
+        title: Text(
+          'select_language'.tr,
+          style: const TextStyle(
+            color: textColor,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+      body: Obx(
+        () => Container(
+          margin: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+          ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // 返回按钮
-              IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: () {
-                  Get.back();
-                },
-                color: primaryColor,
-              ),
+            mainAxisSize: MainAxisSize.min,
+            children: LanguageManager.languages.asMap().entries.map((entry) {
+              int index = entry.key;
+              String language = entry.value;
+              bool isSelected =
+                  authController.currentLanguageIndex.value == index;
 
-              const SizedBox(height: 32),
-
-              // 标题
-              Text(
-                'select_language'.tr,
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: textColor,
-                ),
-              ),
-
-              const SizedBox(height: 32),
-
-              // 语言列表
-              Obx(
-                () => Column(
-                  children: LanguageManager.languages.asMap().entries.map((
-                    entry,
-                  ) {
-                    int index = entry.key;
-                    String language = entry.value;
-                    return RadioListTile<int>(
-                      title: Text(
-                        language,
-                        style: const TextStyle(fontSize: 16, color: textColor),
+              return Column(
+                children: [
+                  ListTile(
+                    title: Text(
+                      language,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        color: textColor,
+                        fontWeight: FontWeight.w500,
                       ),
-                      value: index,
-                      groupValue: authController.currentLanguageIndex.value,
-                      onChanged: (value) {
-                        if (value != null) {
-                          authController.switchLanguage(value);
-                        }
-                      },
-                      activeColor: primaryColor,
-                    );
-                  }).toList(),
-                ),
-              ),
-            ],
+                    ),
+                    trailing: isSelected
+                        ? const Icon(Icons.check_circle, color: primaryColor)
+                        : Icon(Icons.circle_outlined, color: Colors.grey[300]),
+                    onTap: () {
+                      authController.switchLanguage(index);
+                    },
+                  ),
+                  if (index != LanguageManager.languages.length - 1)
+                    const Divider(height: 1, indent: 16, endIndent: 16),
+                ],
+              );
+            }).toList(),
           ),
         ),
       ),

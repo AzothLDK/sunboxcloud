@@ -34,6 +34,9 @@ class AuthController extends GetxController {
   // 路由数据
   final routers = <Map<String, dynamic>>[].obs;
 
+  // 用户信息
+  final userInfo = Rxn<Map<String, dynamic>>();
+
   // 社交登录服务
   SocialAuthService? _socialAuthService;
 
@@ -53,16 +56,32 @@ class AuthController extends GetxController {
     // 加载保存的凭据
     _loadSavedCredentials();
 
+    // 初始化用户信息
+    _loadUserInfo();
+
     // 从本地存储读取保存的语言设置
     currentLanguageIndex.value = GlobalStorage.getLanguage();
 
     // 初始化社交登录服务
     _initSocialAuthService();
 
-    // 如果已登录，则初始化站点控制器
+    // 如果已登录，则初始化站点控制器并获取最新信息
     final token = GlobalStorage.getToken();
     if (token != null && token.isNotEmpty) {
       Get.put(StationController(), permanent: true);
+      // 静默获取用户信息和路由，不阻塞 UI
+      fetchUserInfoAndRouters();
+    }
+  }
+
+  void _loadUserInfo() {
+    final info = GlobalStorage.getLoginInfo();
+    if (info != null) {
+      try {
+        userInfo.value = convert.jsonDecode(info) as Map<String, dynamic>;
+      } catch (e) {
+        developer.log('Error decoding user info: $e', name: 'AuthController');
+      }
     }
   }
 
@@ -386,7 +405,7 @@ class AuthController extends GetxController {
             return;
           }
 
-          ToastUtils.info('google_user_need_register'.tr);
+          // ToastUtils.info('google_user_need_register'.tr);
 
           Get.toNamed('/google-register', arguments: {'email': email});
         } else {
@@ -418,6 +437,7 @@ class AuthController extends GetxController {
         final user = userData['user'] as Map<String, dynamic>?;
         if (user != null) {
           await GlobalStorage.saveLoginInfo(user);
+          this.userInfo.value = user;
         }
 
         List<dynamic> sysApps = userData['sysApps'] ?? [];
@@ -452,6 +472,7 @@ class AuthController extends GetxController {
       if (appId == null) {
         developer.log('appId为空,无法获取路由', name: 'AuthController');
         routers.clear();
+        update(); // 触发 UI 刷新
         return;
       }
 
@@ -469,26 +490,72 @@ class AuthController extends GetxController {
         );
       } else {
         developer.log('获取路由失败: ${response['msg']}', name: 'AuthController');
+        // 出错时也清理 routers，避免一直 loading
+        routers.clear();
       }
     } catch (e) {
       developer.log('获取路由失败: $e', name: 'AuthController', error: e);
+      routers.clear();
+    } finally {
+      update(); // 无论成功失败，都通知 UI 刷新
     }
   }
 
   // 登出
   Future<void> logout() async {
-    // 调用社交登录服务的登出逻辑（如 Google / Apple 登出）
-    if (_socialAuthService != null) {
-      await _socialAuthService!.signOutFromGoogle();
-      await _socialAuthService!.signOutFromApple();
-    }
+    Get.dialog(
+      Center(
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text(
+                'logging_out'.tr,
+                style: const TextStyle(
+                  color: Colors.black87,
+                  fontSize: 14,
+                  decoration: TextDecoration.none,
+                  fontWeight: FontWeight.normal,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      barrierDismissible: false,
+    );
 
-    await GlobalStorage.clearUserInfo();
-    // if (Get.isRegistered<StationController>()) {
-    //    Get.delete<StationController>(); // 登出时销毁，下次登录才会重新 onInit
-    //   Get.reset();
-    // }
-    Get.offAllNamed('/login');
+    try {
+      // 调用社交登录服务的登出逻辑（如 Google / Apple 登出）
+      if (_socialAuthService != null) {
+        await _socialAuthService!.signOutFromGoogle();
+        await _socialAuthService!.signOutFromApple();
+      }
+
+      await GlobalStorage.clearUserInfo();
+      userInfo.value = null;
+      emailController.clear();
+      passwordController.clear();
+
+      // 登出时销毁站点控制器，清除所有站点相关状态
+      if (Get.isRegistered<StationController>()) {
+        Get.delete<StationController>(force: true);
+      }
+
+      Get.offAllNamed('/login');
+    } finally {
+      // Get.offAllNamed 会自动销毁所有路由包括 Dialog，如果登出逻辑发生异常，则手动关闭 Dialog
+      if (Get.isDialogOpen == true) {
+        Get.back();
+      }
+    }
   }
 
   // 获取保存的账号密码

@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:sunboxcloud/utils/network/api_service.dart';
+import '../../../controllers/auth_controller.dart';
 import '../../../utils/constants.dart';
 import '../../../utils/storage.dart';
 import '../../../utils/toast_utils.dart';
@@ -106,15 +107,11 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
     });
 
     try {
-      final userInfoJson = GlobalStorage.getLoginInfo();
-      String? userId;
-      if (userInfoJson != null && userInfoJson.isNotEmpty) {
-        final userInfo =
-            convert.jsonDecode(userInfoJson) as Map<String, dynamic>;
-        userId = userInfo['userId'];
-      }
+      final authController = Get.find<AuthController>();
+      final userInfo = authController.userInfo.value;
+      final userId = userInfo?['userId'];
 
-      if (userId == null || userId.isEmpty) {
+      if (userId == null || userId.toString().isEmpty) {
         setState(() {
           _errorMessage = 'user_id_not_found'.tr;
         });
@@ -140,15 +137,8 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
       final response = await ApiService.editUser(formData);
 
       if (response['code'] == 200) {
-        final userInfoResponse = await ApiService.getSunboxLoginInfo();
-        if (userInfoResponse['code'] == 200 &&
-            userInfoResponse['data'] != null) {
-          final userData = userInfoResponse['data'] as Map<String, dynamic>;
-          final user = userData['user'] as Map<String, dynamic>?;
-          if (user != null) {
-            await GlobalStorage.saveLoginInfo(user);
-          }
-        }
+        // 使用封装好的 GetX 方法重新获取并更新用户信息
+        await authController.fetchUserInfoAndRouters();
 
         ToastUtils.success('profile_updated'.tr);
         Get.offAllNamed('/home');

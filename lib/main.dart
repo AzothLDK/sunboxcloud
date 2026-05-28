@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:get/get.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'routes/app_routes.dart';
 import 'utils/constants.dart';
 import 'langs/messages.dart';
@@ -9,6 +11,7 @@ import 'utils/storage.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await GlobalStorage.getInstance();
+  await initializeDateFormatting();
   Get.put(AuthController());
   runApp(const MyApp());
 }
@@ -23,10 +26,26 @@ class MyApp extends StatelessWidget {
         : const Locale('zh', 'CN');
   }
 
+  String _getInitialRoute() {
+    final token = GlobalStorage.getToken();
+    if (token != null && token.isNotEmpty) {
+      return AppRoutes.home;
+    }
+    return AppRoutes.login;
+  }
+
   @override
   Widget build(BuildContext context) {
     return GetMaterialApp(
       title: 'SunBox Cloud',
+      // builder: (context, child) {
+      //   return MediaQuery(
+      //     data: MediaQuery.of(context).copyWith(
+      //       textScaler: TextScaler.noScaling, // 禁止系统缩放
+      //     ),
+      //     child: child!,
+      //   );
+      // },
       theme: ThemeData(
         primaryColor: primaryColor,
         colorScheme: ColorScheme.fromSeed(
@@ -60,7 +79,13 @@ class MyApp extends StatelessWidget {
       translations: Messages(),
       locale: _getSavedLocale(),
       fallbackLocale: const Locale('zh', 'CN'),
-      initialRoute: AppRoutes.login,
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [Locale('en', 'US'), Locale('zh', 'CN')],
+      initialRoute: _getInitialRoute(),
       getPages: AppRoutes.routes,
     );
   }

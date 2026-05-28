@@ -4,6 +4,8 @@ import '../../utils/constants.dart';
 import '../../controllers/station_controller.dart';
 import '../../model/device_model.dart';
 import '../../model/station_model.dart';
+import '../../widgets/custom_confirm_dialog.dart';
+import '../../widgets/custom_input_dialog.dart';
 
 class MyDevicesPage extends StatelessWidget {
   const MyDevicesPage({super.key});
@@ -173,77 +175,201 @@ class MyDevicesPage extends StatelessWidget {
   ) {
     Get.bottomSheet(
       Container(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.symmetric(horizontal: 20),
         decoration: const BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Handle Bar
+            Center(
+              child: Container(
+                margin: const EdgeInsets.only(top: 12),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Header
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
                   'select_station'.tr,
                   style: const TextStyle(
-                    fontSize: 18,
+                    fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: textColor,
                   ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Get.back(),
+                GestureDetector(
+                  onTap: () => Get.back(),
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.close,
+                      size: 20,
+                      color: textLightColor,
+                    ),
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 24),
+
+            // Station List
             ConstrainedBox(
               constraints: BoxConstraints(
-                maxHeight: MediaQuery.of(context).size.height * 0.4,
+                maxHeight: MediaQuery.of(context).size.height * 0.5,
               ),
-              child: ListView.builder(
+              child: ListView.separated(
                 shrinkWrap: true,
                 itemCount: controller.stations.length,
+                separatorBuilder: (context, index) =>
+                    const SizedBox(height: 12),
                 itemBuilder: (context, index) {
                   final station = controller.stations[index];
-                  return ListTile(
-                    title: Text(station.stationName ?? ''),
+                  final isSelected =
+                      controller.selectedStationId.value == station.id;
+                  return InkWell(
                     onTap: () async {
                       Get.back();
                       final result = await Get.toNamed(
-                        '/distribution-network',
+                        '/scan',
                         arguments: {'stationId': station.id},
                       );
                       if (result == true) {
                         controller.refreshCurrentStation();
                       }
                     },
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? primaryColor.withValues(alpha: 0.05)
+                            : Colors.grey[50],
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: isSelected
+                              ? primaryColor.withValues(alpha: 0.3)
+                              : Colors.transparent,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: isSelected ? primaryColor : Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(
+                              Icons.home_work_outlined,
+                              size: 20,
+                              color: isSelected ? Colors.white : primaryColor,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  station.stationName ?? '',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: isSelected
+                                        ? FontWeight.bold
+                                        : FontWeight.w500,
+                                    color: textColor,
+                                  ),
+                                ),
+                                if (station.detailAddress != null &&
+                                    station.detailAddress!.isNotEmpty) ...[
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    station.detailAddress!,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      color: textLightColor,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                          if (isSelected)
+                            Text(
+                              'current_site'.tr,
+                              style: const TextStyle(
+                                color: primaryColor,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            )
+                          else
+                            const SizedBox.shrink(),
+                        ],
+                      ),
+                    ),
                   );
                 },
               ),
             ),
-            const Divider(),
-            ListTile(
-              leading: const Icon(
-                Icons.add_circle_outline,
-                color: primaryColor,
+            const SizedBox(height: 16),
+
+            // Add New Station Button
+            Container(
+              margin: EdgeInsets.only(
+                bottom: MediaQuery.of(context).padding.bottom,
               ),
-              title: Text(
-                'add_new_station'.tr,
-                style: const TextStyle(
-                  color: primaryColor,
-                  fontWeight: FontWeight.bold,
+              child: ElevatedButton(
+                onPressed: () {
+                  Get.back();
+                  _showNewStationNameDialog(controller);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: primaryColor,
+                  elevation: 0,
+                  side: const BorderSide(color: primaryColor),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.add_circle_outline, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      'add_new_station'.tr,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              onTap: () {
-                Get.back();
-                _showNewStationNameDialog(controller);
-              },
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 15),
           ],
         ),
       ),
@@ -252,42 +378,29 @@ class MyDevicesPage extends StatelessWidget {
 
   void _showNewStationNameDialog(StationController controller) {
     final TextEditingController nameController = TextEditingController();
-    Get.dialog(
-      AlertDialog(
-        title: Text('new_station'.tr),
-        content: TextField(
+    CustomInputDialog.show(
+      context: Get.context!,
+      title: 'new_station'.tr,
+      fields: [
+        InputFieldConfig(
+          label: 'site_name'.tr,
+          hintText: 'enter_site_name'.tr,
           controller: nameController,
-          decoration: InputDecoration(
-            hintText: 'enter_station_name'.tr,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-          autofocus: true,
         ),
-        actions: [
-          TextButton(onPressed: () => Get.back(), child: Text('cancel'.tr)),
-          ElevatedButton(
-            onPressed: () async {
-              final name = nameController.text.trim();
-              if (name.isNotEmpty) {
-                Get.back();
-                final result = await Get.toNamed(
-                  '/distribution-network',
-                  arguments: {'stationName': name},
-                );
-                if (result == true) {
-                  // 新增站点后，需要刷新整个站点列表以获取最新数据
-                  await controller.fetchStations();
-                }
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: primaryColor,
-              foregroundColor: Colors.white,
-            ),
-            child: Text('confirm'.tr),
-          ),
-        ],
-      ),
+      ],
+      onSave: () async {
+        final name = nameController.text.trim();
+        if (name.isNotEmpty) {
+          Get.back();
+          final result = await Get.toNamed(
+            '/scan',
+            arguments: {'stationName': name},
+          );
+          if (result == true) {
+            await controller.fetchStations();
+          }
+        }
+      },
     );
   }
 
@@ -355,45 +468,45 @@ class MyDevicesPage extends StatelessWidget {
           style: const TextStyle(fontWeight: FontWeight.w500, color: textColor),
         ),
         subtitle: Text(
-          'SN:${device.sn ?? ''}',
+          'SN:${device.deviceCode ?? ''}',
           style: const TextStyle(fontSize: 12, color: textLightColor),
         ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: (device.status == 'online' ? Colors.green : Colors.grey)
-                    .withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 6,
-                    height: 6,
-                    decoration: BoxDecoration(
-                      color: device.status == 'online'
-                          ? Colors.green
-                          : Colors.grey,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    device.status?.capitalizeFirst ?? 'Offline',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: device.status == 'online'
-                          ? Colors.green
-                          : Colors.grey,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            // Container(
+            //   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            //   decoration: BoxDecoration(
+            //     color: (device.status == 'online' ? Colors.green : Colors.grey)
+            //         .withValues(alpha: 0.1),
+            //     borderRadius: BorderRadius.circular(12),
+            //   ),
+            //   child: Row(
+            //     mainAxisSize: MainAxisSize.min,
+            //     children: [
+            //       Container(
+            //         width: 6,
+            //         height: 6,
+            //         decoration: BoxDecoration(
+            //           color: device.status == 'online'
+            //               ? Colors.green
+            //               : Colors.grey,
+            //           shape: BoxShape.circle,
+            //         ),
+            //       ),
+            //       const SizedBox(width: 4),
+            //       Text(
+            //         device.status?.capitalizeFirst ?? 'Offline',
+            //         style: TextStyle(
+            //           fontSize: 11,
+            //           color: device.status == 'online'
+            //               ? Colors.green
+            //               : Colors.grey,
+            //         ),
+            //       ),
+            //     ],
+            //   ),
+            // ),
             IconButton(
               icon: const Icon(
                 Icons.delete_outline,
@@ -410,27 +523,18 @@ class MyDevicesPage extends StatelessWidget {
   }
 
   void _confirmDelete(DeviceModel device, StationController controller) {
-    Get.dialog(
-      AlertDialog(
-        title: Text('delete_device'.tr),
-        content: Text('${'confirm_delete_device'.tr} ${device.deviceName}?'),
-        actions: [
-          TextButton(onPressed: () => Get.back(), child: Text('cancel'.tr)),
-          TextButton(
-            onPressed: () async {
-              Get.back();
-              final success = await controller.removeDevice(device.id ?? '');
-              if (success) {
-                Get.snackbar('success'.tr, 'device_deleted_successfully'.tr);
-              }
-            },
-            child: Text(
-              'confirm'.tr,
-              style: const TextStyle(color: Colors.red),
-            ),
-          ),
-        ],
-      ),
+    CustomConfirmDialog.show(
+      context: Get.context!,
+      title: 'delete_device'.tr,
+      content: '${'confirm_delete_device'.tr} ${device.deviceName}?',
+      confirmText: 'delete'.tr,
+      onConfirm: () async {
+        Get.back();
+        final success = await controller.removeDevice(device.id ?? '');
+        if (success) {
+          Get.snackbar('success'.tr, 'device_deleted_successfully'.tr);
+        }
+      },
     );
   }
 }

@@ -13,6 +13,8 @@ import '../../utils/constants.dart';
 import '../../routes/app_routes.dart';
 import '../../utils/toast_utils.dart';
 import '../../utils/network/api_service.dart';
+import '../../controllers/station_controller.dart';
+import '../../widgets/custom_status_dialog.dart';
 
 /// Represents the state of the BLE linking process
 class _LinkingState {
@@ -39,21 +41,15 @@ class DistributionNetworkPage extends StatefulWidget {
 }
 
 class _DistributionNetworkPageState extends State<DistributionNetworkPage> {
-  final TextEditingController _ssidController = TextEditingController(
-    text: '晟能科技',
-  );
-  final TextEditingController _passwordController = TextEditingController(
-    text: 'wxSN2015',
-  );
-  final TextEditingController _bleNameController = TextEditingController(
-    text: 'AZ',
-  );
+  final TextEditingController _ssidController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _bleNameController = TextEditingController();
   final TextEditingController _userDataController = TextEditingController();
 
-  final TextEditingController _qrCodeController = TextEditingController();
-
+  String _cpSn = '';
   String? _stationId;
   String? _stationName;
+  String? _replaceDeviceId;
 
   final ValueNotifier<_LinkingState> _stateNotifier = ValueNotifier(
     const _LinkingState(),
@@ -67,6 +63,12 @@ class _DistributionNetworkPageState extends State<DistributionNetworkPage> {
     final arguments = Get.arguments as Map<String, dynamic>?;
     _stationId = arguments?['stationId'];
     _stationName = arguments?['stationName'];
+    _replaceDeviceId = arguments?['replaceDeviceId'];
+    _cpSn = arguments?['cpSn'] ?? '';
+
+    if (arguments?['deviceName'] != null) {
+      _bleNameController.text = arguments!['deviceName'];
+    }
     _checkSimulator();
     _initBleLink();
     _listenToEvents();
@@ -120,8 +122,28 @@ class _DistributionNetworkPageState extends State<DistributionNetworkPage> {
       await WiFiScan.instance.startScan();
       await Future.delayed(const Duration(seconds: 2));
 
-      final results = await WiFiScan.instance.getScannedResults();
+      //  final results = await WiFiScan.instance.getScannedResults();
+
+      final rawResults = await WiFiScan.instance.getScannedResults();
       Get.back();
+
+      // 过滤与去重逻辑
+      final Map<String, WiFiAccessPoint> distinctMap = {};
+      for (var ap in rawResults) {
+        // 1. 过滤掉没有名称的
+        if (ap.ssid.isEmpty) continue;
+
+        // 2. 过滤掉 5G 频段的 (通常 5G 频率 > 5000MHz)
+        if (ap.frequency > 5000) continue;
+
+        // 3. 重名的选择信号最强的
+        if (!distinctMap.containsKey(ap.ssid) ||
+            ap.level > distinctMap[ap.ssid]!.level) {
+          distinctMap[ap.ssid] = ap;
+        }
+      }
+
+      final results = distinctMap.values.toList();
 
       if (results.isEmpty) {
         ToastUtils.warning('no_wifi_found'.tr);
@@ -164,9 +186,23 @@ class _DistributionNetworkPageState extends State<DistributionNetworkPage> {
                             ? 'unknown_network'.tr
                             : network.ssid,
                       ),
-                      subtitle: Text(
-                        '${'signal_strength'.tr}: ${network.level} dBm',
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${'signal_strength'.tr}: ${network.level} dBm',
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                          Text(
+                            'BSSID: ${network.bssid} | ${'frequency'.tr}: ${network.frequency}MHz | ${'channel'.tr}: ${_calculateChannel(network.frequency)}',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
                       ),
+
                       onTap: () {
                         setState(() {
                           _ssidController.text = network.ssid;
@@ -205,22 +241,80 @@ class _DistributionNetworkPageState extends State<DistributionNetworkPage> {
     if (isSimulator) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         Get.dialog(
-          AlertDialog(
-            title: Text('info'.tr),
-            content: Text(message),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Get.back();
-                  Get.back();
-                },
-                child: Text(
-                  'confirm'.tr,
-                  style: TextStyle(color: primaryColor),
-                ),
+          Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            backgroundColor: Colors.white,
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: primaryColor.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.info_outline,
+                      color: primaryColor,
+                      size: 28,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'info'.tr,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: textColor,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    message,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: textLightColor,
+                      height: 1.5,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 28),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Get.back();
+                        Get.back();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryColor,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        'confirm'.tr,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
+          barrierDismissible: false,
         );
       });
     }
@@ -274,6 +368,8 @@ class _DistributionNetworkPageState extends State<DistributionNetworkPage> {
                 '${'config_success'.tr}\nMAC: ${event.mac}\nIP: ${event.ip}',
             isLinking: false,
           );
+          // 配网成功后自动添加设备
+          _addDevice(sn: _cpSn, mac: event.mac);
         } else if (event is LinkingError) {
           _updateState(
             message: '${'config_failed'.tr}: ${event.message}',
@@ -304,8 +400,18 @@ class _DistributionNetworkPageState extends State<DistributionNetworkPage> {
     );
   }
 
+  int _calculateChannel(int frequency) {
+    if (frequency >= 2412 && frequency <= 2484) {
+      return (frequency - 2412) ~/ 5 + 1;
+    } else if (frequency >= 5170 && frequency <= 5825) {
+      return (frequency - 5170) ~/ 5 + 34;
+    }
+    return 0;
+  }
+
   /// Start the linking process after checking permissions.
   Future<void> _startLinking() async {
+    FocusScope.of(context).unfocus(); // 取消输入框聚焦，关闭键盘
     _updateState(isLinking: true, message: 'checking_permissions'.tr);
 
     if (Platform.isAndroid) {
@@ -342,9 +448,7 @@ class _DistributionNetworkPageState extends State<DistributionNetworkPage> {
         ssid: _ssidController.text.trim(),
         password: _passwordController.text.trim(),
         bleName: _bleNameController.text.trim(),
-        userData: _qrCodeController.text.trim().isNotEmpty
-            ? _qrCodeController.text.trim()
-            : _userDataController.text.trim(),
+        userData: _cpSn.isNotEmpty ? _cpSn : _userDataController.text.trim(),
         deviceFindingType: 3,
       );
     } catch (e) {
@@ -371,56 +475,75 @@ class _DistributionNetworkPageState extends State<DistributionNetworkPage> {
     }
   }
 
-  /// Navigate to scan page and get result
-  Future<void> _scanQRCode() async {
-    final result = await Get.toNamed(AppRoutes.scan);
-    if (result != null && result is String) {
-      setState(() {
-        _qrCodeController.text = result;
-      });
-      ToastUtils.success('device_info_obtained'.tr);
-    }
-  }
-
-  Future<void> _addDevice() async {
+  Future<void> _addDevice({String? sn, String? mac}) async {
     try {
       Get.dialog(
         const Center(child: CircularProgressIndicator()),
         barrierDismissible: false,
       );
-      // SVProgressHUD.show();
-      final now = DateTime.now();
-      final sn =
-          '${now.year}'
-          '${now.month.toString().padLeft(2, '0')}'
-          '${now.day.toString().padLeft(2, '0')}'
-          '${now.hour.toString().padLeft(2, '0')}'
-          '${now.minute.toString().padLeft(2, '0')}'
-          '${now.second.toString().padLeft(2, '0')}'
-          '${now.millisecond.toString().padLeft(3, '0')}';
 
-      final Map<String, dynamic> data = {
-        'cpSn': sn,
-        if (_stationId != null) 'stationId': _stationId,
-        if (_stationName != null) 'stationName': _stationName,
-      };
+      String cpSn = sn ?? '';
+      if (cpSn.isEmpty) {
+        final now = DateTime.now();
+        cpSn =
+            '${now.year}'
+            '${now.month.toString().padLeft(2, '0')}'
+            '${now.day.toString().padLeft(2, '0')}'
+            '${now.hour.toString().padLeft(2, '0')}'
+            '${now.minute.toString().padLeft(2, '0')}'
+            '${now.second.toString().padLeft(2, '0')}'
+            '${now.millisecond.toString().padLeft(3, '0')}';
+      }
 
-      final result = await ApiService.addDevice(data);
-      Get.back();
-      if (result['code'] == 200) {
-        Get.back(result: true);
-        ToastUtils.success('device_added_success'.tr);
+      final StationController controller = Get.find<StationController>();
+      Map<String, dynamic> response;
+
+      if (_replaceDeviceId != null && _replaceDeviceId!.isNotEmpty) {
+        // 更换采集棒逻辑
+        final Map<String, dynamic> data = {
+          'cpSn': cpSn,
+          'deviceId': _replaceDeviceId,
+          'deviceMac': mac ?? '',
+        };
+        response = await controller.replaceDevice(data);
       } else {
-        ToastUtils.error(result['msg'] ?? 'device_added_failed'.tr);
+        // 添加设备逻辑
+        final Map<String, dynamic> data = {
+          'cpSn': cpSn,
+          'deviceMac': mac ?? '',
+          if (_stationId != null) 'stationId': _stationId,
+          if (_stationName != null) 'stationName': _stationName,
+        };
+        response = await controller.addDevice(data);
+      }
+
+      Get.back(); // 关闭加载框
+
+      if (response['code'] == 200) {
+        CustomStatusDialog.show(
+          type: CustomDialogType.success,
+          message: 'device_added_success'.tr,
+          onConfirm: () {
+            Get.offAllNamed(AppRoutes.home); // 返回首页
+          },
+        );
+      } else {
+        CustomStatusDialog.show(
+          type: CustomDialogType.error,
+          message: response['msg'] ?? 'device_added_failed'.tr,
+        );
       }
     } catch (e) {
       Get.back();
       developer.log(
-        'Failed to add device: $e',
+        'Failed to add/replace device: $e',
         name: 'DistributionNetworkPage',
         error: e,
       );
-      ToastUtils.error('device_added_failed'.tr);
+      CustomStatusDialog.show(
+        type: CustomDialogType.error,
+        message: 'device_added_failed'.tr,
+      );
     }
   }
 
@@ -437,131 +560,120 @@ class _DistributionNetworkPageState extends State<DistributionNetworkPage> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
     return Scaffold(
+      backgroundColor: backgroundColor,
       appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.black, size: 20),
+          onPressed: () => Get.back(),
+        ),
         title: Text(
           'device_network_config'.tr,
-          style: const TextStyle(fontSize: 18),
-        ),
-        centerTitle: true,
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-      ),
-      extendBodyBehindAppBar: true,
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              colorScheme.primaryContainer.withValues(alpha: 0.4),
-              colorScheme.surface,
-            ],
+          style: const TextStyle(
+            color: Colors.black,
+            fontSize: 18,
+            fontWeight: FontWeight.w500,
           ),
         ),
-        child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _buildCard(
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildTextField(
-                              controller: _qrCodeController,
-                              label: 'device_qr_info'.tr,
-                              icon: Icons.qr_code_scanner,
-                              hint: 'scan_device_qr_hint'.tr,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          IconButton.filled(
-                            onPressed: _scanQRCode,
-                            icon: const Icon(Icons.center_focus_weak),
-                            style: IconButton.styleFrom(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              padding: const EdgeInsets.all(12),
-                            ),
-                          ),
-                        ],
+        centerTitle: false,
+        titleSpacing: 0,
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _buildCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'device_qr_info'.tr,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: textLightColor,
                       ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                _buildCard(
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildTextField(
-                              controller: _ssidController,
-                              label: 'wifi_name'.tr,
-                              icon: Icons.wifi,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          IconButton.filledTonal(
-                            onPressed: _scanWifiNetworks,
-                            icon: const Icon(Icons.list),
-                            style: IconButton.styleFrom(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              padding: const EdgeInsets.all(12),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      _buildTextField(
-                        controller: _passwordController,
-                        label: 'wifi_password'.tr,
-                        icon: Icons.lock,
-                        obscureText: true,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                _buildCard(
-                  child: Column(
-                    children: [
-                      _buildTextField(
-                        controller: _bleNameController,
-                        enabled: false,
-                        label: 'ble_device_name'.tr,
-                        icon: Icons.bluetooth,
-                        hint: 'ble_name_default'.tr,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 15),
-                ValueListenableBuilder<_LinkingState>(
-                  valueListenable: _stateNotifier,
-                  builder: (context, state, child) {
-                    return Column(
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
                       children: [
-                        _buildStatusDisplay(state, colorScheme),
-                        const SizedBox(height: 32),
-                        _buildActionButtons(state),
+                        const Icon(
+                          Icons.qr_code_scanner,
+                          size: 20,
+                          color: textLightColor,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            _cpSn,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                              color: textColor,
+                            ),
+                          ),
+                        ),
                       ],
-                    );
-                  },
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 16),
+              _buildCard(
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildTextField(
+                            controller: _ssidController,
+                            label: 'wifi_name'.tr,
+                            icon: Icons.wifi,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        IconButton(
+                          onPressed: _scanWifiNetworks,
+                          icon: const Icon(Icons.list, color: primaryColor),
+                          style: IconButton.styleFrom(
+                            backgroundColor: primaryColor.withValues(
+                              alpha: 0.1,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.all(12),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    _buildTextField(
+                      controller: _passwordController,
+                      label: 'wifi_password'.tr,
+                      icon: Icons.lock,
+                      obscureText: true,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              ValueListenableBuilder<_LinkingState>(
+                valueListenable: _stateNotifier,
+                builder: (context, state, child) {
+                  return Column(
+                    children: [
+                      _buildStatusDisplay(state),
+                      const SizedBox(height: 32),
+                      _buildActionButtons(state),
+                    ],
+                  );
+                },
+              ),
+            ],
           ),
         ),
       ),
@@ -571,17 +683,17 @@ class _DistributionNetworkPageState extends State<DistributionNetworkPage> {
   Widget _buildCard({required Widget child}) {
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(20),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
-      padding: const EdgeInsets.all(15),
+      padding: const EdgeInsets.all(16),
       child: child,
     );
   }
@@ -598,60 +710,66 @@ class _DistributionNetworkPageState extends State<DistributionNetworkPage> {
       controller: controller,
       obscureText: obscureText,
       enabled: enabled,
+      style: TextStyle(
+        fontSize: 15,
+        color: enabled ? textColor : textLightColor,
+      ),
       decoration: InputDecoration(
         labelText: label,
+        labelStyle: const TextStyle(fontSize: 14, color: textLightColor),
         hintText: hint,
-        prefixIcon: Icon(icon),
+        prefixIcon: Icon(icon, size: 20, color: textLightColor),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
         ),
         filled: true,
-        fillColor: Theme.of(
-          context,
-        ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        fillColor: const Color(0xFFF5F5F5),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
       ),
     );
   }
 
-  Widget _buildStatusDisplay(_LinkingState state, ColorScheme colorScheme) {
+  Widget _buildStatusDisplay(_LinkingState state) {
+    if (state.message.isEmpty) return const SizedBox.shrink();
+
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: state.isLinking
-            ? colorScheme.primaryContainer
-            : colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(16),
+            ? primaryColor.withValues(alpha: 0.05)
+            : const Color(0xFFF5F5F5),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: state.isLinking ? colorScheme.primary : Colors.transparent,
-          width: 1.5,
+          color: state.isLinking ? primaryColor : Colors.transparent,
+          width: 1,
         ),
       ),
       child: Row(
         children: [
           if (state.isLinking) ...[
-            SizedBox(
-              width: 24,
-              height: 24,
+            const SizedBox(
+              width: 20,
+              height: 20,
               child: CircularProgressIndicator(
-                strokeWidth: 2.5,
-                color: colorScheme.primary,
+                strokeWidth: 2,
+                color: primaryColor,
               ),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 12),
           ] else ...[
-            Icon(Icons.info_outline, color: colorScheme.onSurfaceVariant),
-            const SizedBox(width: 16),
+            const Icon(Icons.info_outline, color: textLightColor, size: 20),
+            const SizedBox(width: 12),
           ],
           Expanded(
             child: Text(
               state.message,
               style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w500,
-                color: state.isLinking
-                    ? colorScheme.onPrimaryContainer
-                    : colorScheme.onSurfaceVariant,
+                fontSize: 14,
+                color: state.isLinking ? primaryColor : textColor,
               ),
             ),
           ),
@@ -666,42 +784,46 @@ class _DistributionNetworkPageState extends State<DistributionNetworkPage> {
         Row(
           children: [
             Expanded(
-              child: FilledButton(
+              child: ElevatedButton(
                 onPressed: state.isLinking ? null : _startLinking,
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(24),
                   ),
+                  elevation: 0,
                 ),
                 child: Text(
                   'start_config'.tr,
                   style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 15),
             Expanded(
-              child: FilledButton.tonal(
+              child: ElevatedButton(
                 onPressed: state.isLinking ? _stopLinking : null,
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  backgroundColor: Theme.of(context).colorScheme.errorContainer,
-                  foregroundColor: Theme.of(
-                    context,
-                  ).colorScheme.onErrorContainer,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: state.isLinking
+                      ? errorColor
+                      : Colors.grey[300],
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(24),
                   ),
+                  elevation: 0,
                 ),
                 child: Text(
                   'stop_config'.tr,
                   style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ),
@@ -709,21 +831,9 @@ class _DistributionNetworkPageState extends State<DistributionNetworkPage> {
           ],
         ),
         const SizedBox(height: 12),
-        SizedBox(
-          width: double.infinity,
-          child: OutlinedButton(
-            onPressed: state.isLinking ? null : _addDevice,
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: Text(
-              'simulate_add_device'.tr,
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-            ),
-          ),
+        Text(
+          'ensure_24ghz_wifi'.tr,
+          style: const TextStyle(color: textLightColor, fontSize: 12),
         ),
       ],
     );

@@ -4,6 +4,9 @@ import 'dart:developer' as developer;
 import '../../utils/constants.dart';
 import '../../utils/network/api_service.dart';
 import '../../utils/toast_utils.dart';
+import '../../widgets/custom_confirm_dialog.dart';
+import '../../controllers/station_controller.dart';
+import '../../routes/app_routes.dart';
 
 class DeviceDetailPage extends StatelessWidget {
   const DeviceDetailPage({super.key});
@@ -19,7 +22,7 @@ class DeviceDetailPage extends StatelessWidget {
     }
 
     final model = device['model'] as Map<String, dynamic>?;
-    final deviceName = device['deviceName'] ?? '';
+    final deviceName = device['deviceType'] ?? '';
     final deviceCode = device['deviceCode'] ?? '';
 
     return Scaffold(
@@ -40,10 +43,67 @@ class DeviceDetailPage extends StatelessWidget {
           ),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.delete_outline, color: Colors.red),
-            onPressed: () =>
-                _showDeleteDialog(context, deviceName, device['id'] ?? ''),
+          PopupMenuButton<String>(
+            color: backgroundColor,
+            icon: const Icon(Icons.settings, color: textColor),
+            offset: const Offset(0, 50),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            elevation: 4,
+            onSelected: (value) {
+              if (value == 'delete') {
+                _showDeleteDialog(context, deviceName, device['id'] ?? '');
+              } else if (value == 'change') {
+                Get.toNamed(
+                  AppRoutes.scan,
+                  arguments: {'deviceId': device['id']},
+                );
+              }
+            },
+            itemBuilder: (BuildContext context) => [
+              PopupMenuItem(
+                value: 'change',
+                height: 45,
+                child: Row(
+                  children: [
+                    const Icon(Icons.swap_horiz, color: textColor, size: 20),
+                    const SizedBox(width: 12),
+                    Text(
+                      'change_collector'.tr,
+                      style: const TextStyle(
+                        color: textColor,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const PopupMenuDivider(height: 1),
+              PopupMenuItem(
+                value: 'delete',
+                height: 45,
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.delete_outline,
+                      color: Colors.red,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'delete_device'.tr,
+                      style: const TextStyle(
+                        color: Colors.red,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -57,8 +117,8 @@ class DeviceDetailPage extends StatelessWidget {
               child: Column(
                 children: [
                   Image.asset(
-                    'assets/sndevice.png',
-                    height: 260,
+                    'assets/sndevicelite.png',
+                    height: 200,
                     fit: BoxFit.contain,
                     errorBuilder: (c, e, s) => Container(
                       width: 120,
@@ -89,15 +149,15 @@ class DeviceDetailPage extends StatelessWidget {
                 children: [
                   _buildSectionCard(Icons.electrical_services, 'Inverter', [
                     _buildSpecRow(
-                      'Rated AC voltage',
+                      'Rated AC Voltage',
                       '${model?['ratedVoltage'] ?? '-'}V',
                     ),
                     _buildSpecRow(
-                      'Rated grid Frequency',
+                      'Rated Grid Frequency',
                       '${model?['frequencySpec'] ?? '-'}Hz',
                     ),
                     _buildSpecRow(
-                      'Max PV input voltage',
+                      'Max PV Input Voltage',
                       '${model?['maxInputVoltage'] ?? '-'}V',
                     ),
                   ]),
@@ -192,41 +252,20 @@ class DeviceDetailPage extends StatelessWidget {
     String deviceName,
     String deviceId,
   ) {
-    showDialog(
+    CustomConfirmDialog.show(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('delete_device'.tr),
-        content: Text('${'confirm_delete_device'.tr} "$deviceName"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('cancel'.tr),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              try {
-                final response = await ApiService.removeDevice(deviceId);
-                if (response['code'] == 200) {
-                  Get.back(result: true);
-                  ToastUtils.success('device_deleted_successfully'.tr);
-                } else {
-                  ToastUtils.error(response['msg'] ?? 'delete_failed'.tr);
-                }
-              } catch (e) {
-                developer.log(
-                  'Failed to delete device: $e',
-                  name: 'DeviceDetailPage',
-                  error: e,
-                );
-                ToastUtils.error('delete_failed'.tr);
-              }
-            },
-            child: Text('delete'.tr, style: const TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
+      title: 'delete_device'.tr,
+      content: '${'confirm_delete_device'.tr} "$deviceName"?',
+      confirmText: 'delete'.tr,
+      onConfirm: () async {
+        Navigator.pop(context);
+        final StationController controller = Get.find<StationController>();
+        final success = await controller.removeDevice(deviceId);
+        if (success) {
+          Get.back(result: true);
+          ToastUtils.success('device_deleted_successfully'.tr);
+        }
+      },
     );
   }
 }

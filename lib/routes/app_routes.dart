@@ -1,6 +1,7 @@
 import 'package:get/get.dart';
 import '../pages/login_page.dart';
 import '../pages/register_page.dart';
+import '../pages/register_success_page.dart';
 import '../pages/google_register_page.dart';
 import '../pages/mine/complete_profile_page.dart';
 import '../pages/mine/setting/language_page.dart';
@@ -19,12 +20,17 @@ import '../pages/mine/setting/change_email_page.dart';
 import '../pages/mine/setting/edit_field_page.dart';
 import '../pages/mine/setting/notifications_page.dart';
 import '../pages/distributionNetwork/distributionNetwork_page.dart';
+import '../pages/distributionNetwork/add_device_page.dart';
 import '../pages/distributionNetwork/scan_page.dart';
 import '../pages/mine/device_detail_page.dart';
+
+import '../pages/mine/my_site_page.dart';
+import '../pages/mine/add_site_page.dart';
 
 class AppRoutes {
   static const String login = '/login';
   static const String register = '/register';
+  static const String registerSuccess = '/register-success';
   static const String googleRegister = '/google-register';
   static const String completeProfile = '/complete-profile';
   static const String language = '/language';
@@ -41,11 +47,18 @@ class AppRoutes {
   static const String resetPassword = '/reset-password';
   static const String notifications = '/notifications';
   static const String distributionNetwork = '/distribution-network';
+  static const String bleConfig = '/ble-config';
   static const String scan = '/scan';
   static const String changeEmail = '/change-email';
   static const String deviceDetail = '/device-detail';
+  static const String addSite = '/add-site';
 
   static final routes = [
+    GetPage(
+      name: addSite,
+      page: () => const AddSitePage(),
+      transition: Transition.rightToLeft,
+    ),
     GetPage(
       name: login,
       page: () => const LoginPage(),
@@ -54,6 +67,11 @@ class AppRoutes {
     GetPage(
       name: register,
       page: () => const RegisterPage(),
+      transition: Transition.fade,
+    ),
+    GetPage(
+      name: registerSuccess,
+      page: () => const RegisterSuccessPage(),
       transition: Transition.fade,
     ),
     GetPage(
@@ -129,6 +147,11 @@ class AppRoutes {
     GetPage(
       name: notifications,
       page: () => const NotificationsPage(),
+      transition: Transition.fade,
+    ),
+    GetPage(
+      name: bleConfig,
+      page: () => const AddDevicePage(),
       transition: Transition.fade,
     ),
     GetPage(

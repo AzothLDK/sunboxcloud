@@ -1,3 +1,4 @@
+import 'dart:io' show Platform;
 import 'dart:developer' as developer;
 
 import 'package:get/get.dart';
@@ -139,11 +140,18 @@ class SocialAuthService extends GetxService {
     try {
       isLoading.value = true;
 
+      // 在 Android 平台上使用 Apple 登录必须提供 webAuthenticationOptions
       final credential = await SignInWithApple.getAppleIDCredential(
         scopes: [
           AppleIDAuthorizationScopes.email,
           AppleIDAuthorizationScopes.fullName,
         ],
+        webAuthenticationOptions: Platform.isAndroid
+            ? WebAuthenticationOptions(
+                clientId: 'com.smartwuxi.sunboxcloudweb',
+                redirectUri: Uri.parse('https://smartwuxi.com/callback'),
+              )
+            : null,
       );
 
       final result = {

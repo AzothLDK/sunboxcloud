@@ -1,3 +1,4 @@
+import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/auth_controller.dart';
@@ -33,37 +34,45 @@ class LoginPage extends StatelessWidget {
               Center(
                 child: Column(
                   children: [
-                    Container(
-                      width: 80,
-                      height: 80,
-                      decoration: BoxDecoration(
-                        color: primaryColor,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Center(
-                        child: Text(
-                          'SN',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 40,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                    // Container(
+                    //   width: 80,
+                    //   height: 80,
+                    //   decoration: BoxDecoration(
+                    //     color: primaryColor,
+                    //     borderRadius: BorderRadius.circular(20),
+                    //   ),
+                    //   child: const Center(
+                    //     child: Text(
+                    //       'SN',
+                    //       style: TextStyle(
+                    //         color: Colors.white,
+                    //         fontSize: 40,
+                    //         fontWeight: FontWeight.bold,
+                    //       ),
+                    //     ),
+                    //   ),
+                    // ),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(15),
+                      child: Image.asset(
+                        'assets/snlogoimage.png',
+                        width: 100,
+                        height: 100,
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
                     const Text(
-                      'SunBox',
+                      'Home SunBox',
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
                         color: textColor,
                       ),
                     ),
-                    const Text(
-                      'ENERGY',
-                      style: TextStyle(fontSize: 14, color: textLightColor),
-                    ),
+                    // const Text(
+                    //   'ENERGY',
+                    //   style: TextStyle(fontSize: 14, color: textLightColor),
+                    // ),
                   ],
                 ),
               ),
@@ -187,26 +196,28 @@ class LoginPage extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // 苹果登录按钮
-                      GestureDetector(
-                        onTap: authController.loginWithApple,
-                        child: Container(
-                          width: 50,
-                          height: 50,
-                          decoration: BoxDecoration(
-                            border: Border.all(color: borderColor),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Center(
-                            child: Image.asset(
-                              'assets/apple.png',
-                              width: 24,
-                              height: 24,
+                      // 苹果登录按钮（仅在非安卓平台显示）
+                      if (!Platform.isAndroid) ...[
+                        GestureDetector(
+                          onTap: authController.loginWithApple,
+                          child: Container(
+                            width: 50,
+                            height: 50,
+                            decoration: BoxDecoration(
+                              border: Border.all(color: borderColor),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Center(
+                              child: Image.asset(
+                                'assets/apple.png',
+                                width: 24,
+                                height: 24,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 15),
+                        const SizedBox(width: 15),
+                      ],
                       // 谷歌登录按钮
                       GestureDetector(
                         onTap: authController.loginWithGoogle,

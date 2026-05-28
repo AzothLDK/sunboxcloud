@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:get/get.dart';
 import '../../utils/constants.dart';
+import '../../controllers/station_controller.dart';
 import 'animated_flow_chart.dart';
 
 class EnergyFlowOverlay extends StatelessWidget {
@@ -7,6 +10,8 @@ class EnergyFlowOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final StationController controller = Get.find<StationController>();
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
@@ -15,90 +20,107 @@ class EnergyFlowOverlay extends StatelessWidget {
         double sx(double x) => x / kDesignWidth * width;
         double sy(double y) => y / kDesignHeight * height;
 
-        return SizedBox(
-          width: width,
-          height: height,
-          child: CustomPaint(
-            painter: EnergyFlowPainter(width: width, height: height),
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Positioned(
-                  top: sy(0),
-                  left: sx(20),
-                  child: Text(
-                    '23°C Cloudy',
-                    style: TextStyle(
-                      fontSize: sy(16),
-                      fontWeight: FontWeight.bold,
-                      color: textColor,
+        return Obx(() {
+          final data = controller.homeData.value;
+
+          return SizedBox(
+            width: width,
+            height: height,
+            child: CustomPaint(
+              painter: EnergyFlowPainter(width: width, height: height),
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Positioned(
+                    top: sy(0),
+                    left: sx(20),
+                    child: Row(
+                      children: [
+                        Text(
+                          '${data?.temperature ?? '--'}°C ',
+                          style: TextStyle(
+                            fontSize: sy(16),
+                            fontWeight: FontWeight.bold,
+                            color: textColor,
+                          ),
+                        ),
+                        SvgPicture.asset(
+                          'assets/icons/${data?.icon ?? "100"}.svg',
+                          width: 24,
+                          height: 24,
+                          // colorFilter: ColorFilter.mode(
+                          //     Colors.yellow,
+                          //     BlendMode.srcIn), // 可选：修改颜色
+                        ),
+                      ],
                     ),
                   ),
-                ),
-                Positioned(
-                  top: sy(20),
-                  left: sx(140),
-                  child: Container(
-                    padding: EdgeInsets.all(sy(8)),
-                    child: Text(
-                      'Solar\n0.5 kW',
-                      style: TextStyle(fontSize: sy(14), color: textColor),
-                      textAlign: TextAlign.right,
+                  Positioned(
+                    top: sy(20),
+                    // left: sx(140),
+                    right: sx(200),
+                    child: Container(
+                      padding: EdgeInsets.all(sy(8)),
+                      child: Text(
+                        'solar'.tr + '\n${data?.solar ?? '--'} kW',
+                        style: TextStyle(fontSize: sy(14), color: textColor),
+                        textAlign: TextAlign.right,
+                      ),
                     ),
                   ),
-                ),
-                Positioned(
-                  top: sy(0),
-                  right: sx(60),
-                  child: Container(
-                    padding: EdgeInsets.all(sy(8)),
-                    child: Text(
-                      'Grid\n0.5 kW',
-                      style: TextStyle(fontSize: sy(14), color: textColor),
-                      textAlign: TextAlign.center,
+                  Positioned(
+                    top: sy(0),
+                    right: sx(60),
+                    child: Container(
+                      padding: EdgeInsets.all(sy(8)),
+                      child: Text(
+                        'grid'.tr + '\n${data?.grid ?? '--'} kW',
+                        style: TextStyle(fontSize: sy(14), color: textColor),
+                        textAlign: TextAlign.right,
+                      ),
                     ),
                   ),
-                ),
-                Positioned(
-                  bottom: sy(20),
-                  left: sx(20),
-                  child: Container(
-                    padding: EdgeInsets.all(sy(8)),
-                    child: Text(
-                      'House Load\n0.7 kW',
-                      style: TextStyle(fontSize: sy(14), color: textColor),
-                      textAlign: TextAlign.right,
+                  Positioned(
+                    bottom: sy(20),
+                    right: sx(280),
+                    child: Container(
+                      padding: EdgeInsets.all(sy(8)),
+                      child: Text(
+                        'site_load'.tr + '\n${data?.site ?? '--'} kW',
+                        style: TextStyle(fontSize: sy(14), color: textColor),
+                        textAlign: TextAlign.right,
+                      ),
                     ),
                   ),
-                ),
-                Positioned(
-                  bottom: sy(0),
-                  left: sx(160),
-                  child: Container(
-                    padding: EdgeInsets.all(sy(8)),
-                    child: Text(
-                      'EV Charger\n7 kW',
-                      style: TextStyle(fontSize: sy(14), color: textColor),
-                      textAlign: TextAlign.left,
+                  Positioned(
+                    bottom: sy(0),
+                    left: sx(160),
+                    child: Container(
+                      padding: EdgeInsets.all(sy(8)),
+                      child: Text(
+                        'ev_charger'.tr + '\n-- kW',
+                        style: TextStyle(fontSize: sy(14), color: textColor),
+                        textAlign: TextAlign.left,
+                      ),
                     ),
                   ),
-                ),
-                Positioned(
-                  bottom: sy(0),
-                  right: sx(80),
-                  child: Container(
-                    padding: EdgeInsets.all(sy(8)),
-                    child: Text(
-                      'SunBox\n0.5 kW',
-                      style: TextStyle(fontSize: sy(14), color: textColor),
-                      textAlign: TextAlign.center,
+                  Positioned(
+                    bottom: sy(0),
+                    right: sx(80),
+                    child: Container(
+                      padding: EdgeInsets.all(sy(8)),
+                      child: Text(
+                        'SunBox\n${data?.storage ?? '--'} kW',
+                        style: TextStyle(fontSize: sy(14), color: textColor),
+                        textAlign: TextAlign.center,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        );
+          );
+        });
       },
     );
   }

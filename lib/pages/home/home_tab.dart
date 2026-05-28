@@ -64,45 +64,52 @@ class _HomeTabState extends State<HomeTab> {
 
   // 根据指标ID获取指标信息
   Map<String, dynamic> getIndicatorInfo(String indicatorId) {
+    final data = controller.homeData.value;
     switch (indicatorId) {
       case 'solar_generation':
         return {
           'name': 'solar_generation'.tr,
-          'value': '200 kWh',
+          'value': '${data?.pvPower ?? '--'}',
+          'unit': 'kWh',
           'icon': 'assets/solar.png',
         };
       case 'site_load':
         return {
           'name': 'site_load'.tr,
-          'value': '300 kWh',
+          'value': '${data?.loadPower ?? '--'}',
+          'unit': 'kWh',
           'icon': 'assets/site.png',
         };
       case 'battery_charging':
         return {
           'name': 'battery_charging'.tr,
-          'value': '200 kWh',
+          'value': '${data?.chargePower ?? '--'}',
+          'unit': 'kWh',
           'icon': 'assets/charging.png',
         };
       case 'battery_discharging':
         return {
           'name': 'battery_discharging'.tr,
-          'value': '300 kWh',
+          'value': '${data?.dischargePower ?? '--'}',
+          'unit': 'kWh',
           'icon': 'assets/discharging.png',
         };
       case 'buy_from_grid':
         return {
           'name': 'buy_from_grid'.tr,
-          'value': '100 kWh',
+          'value': '${data?.gridPower ?? '--'}',
+          'unit': 'kWh',
           'icon': 'assets/bfg.png',
         };
       case 'sell_to_grid':
         return {
           'name': 'sell_to_grid'.tr,
-          'value': '50 kWh',
+          'value': '${data?.gridSellPower ?? '--'}',
+          'unit': 'kWh',
           'icon': 'assets/stg.png',
         };
       default:
-        return {'name': '', 'value': '', 'icon': ''};
+        return {'name': '', 'value': '', 'unit': '', 'icon': ''};
     }
   }
 
@@ -189,15 +196,23 @@ class _HomeTabState extends State<HomeTab> {
       ),
       child: SafeArea(
         child: Obx(() {
-          if (controller.isStationsLoading.value &&
-              controller.stations.isEmpty) {
-            return const Center(child: CircularProgressIndicator());
+          // 1. 如果正在加载站点列表且列表为空，或者正在加载当前站点的设备/首页数据
+          if ((controller.isStationsLoading.value &&
+                  controller.stations.isEmpty) ||
+              controller.isDevicesLoading.value ||
+              controller.isHomeDataLoading.value) {
+            return Container(
+              color: Colors.transparent,
+              child: const Center(child: CircularProgressIndicator()),
+            );
           }
 
-          if (controller.stations.isEmpty) {
+          // 2. 如果没有站点，或者当前站点加载完成但没有设备，显示空状态
+          if (controller.stations.isEmpty || controller.devices.isEmpty) {
             return _buildEmptyState();
           }
 
+          // 3. 正常显示内容
           return RefreshIndicator(
             onRefresh: () => controller.fetchStations(),
             child: _buildNormalContent(),
@@ -208,91 +223,160 @@ class _HomeTabState extends State<HomeTab> {
   }
 
   Widget _buildEmptyState() {
-    return Column(
-      children: [
-        // 顶部按钮栏
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              GestureDetector(
-                onTap: () {
-                  Get.toNamed('/notifications');
-                },
-                child: const Icon(
-                  Icons.notifications,
-                  color: textColor,
-                  size: 24,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 15),
-        AspectRatio(
-          aspectRatio: 400 / 350,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              Image.asset('assets/centerhouse.png', fit: BoxFit.fill),
-              const AnimatedFlowChart(),
-              const EnergyFlowOverlay(),
-            ],
-          ),
-        ),
-        Expanded(
-          child: Center(
+    return RefreshIndicator(
+      onRefresh: () => controller.fetchStations(),
+      child: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          SliverFillRemaining(
+            hasScrollBody: false,
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                GestureDetector(
-                  onTap: () async {
-                    final result = await Get.toNamed('/distribution-network');
-                    if (result == true) {
-                      controller.fetchStations();
-                    }
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 32,
-                      vertical: 16,
-                    ),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: primaryColor),
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
+                // 顶部按钮栏
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 10,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // 如果有站点但没设备，显示站点切换按钮
+                      if (controller.stations.isNotEmpty)
+                        _buildStationSelector()
+                      else
+                        const SizedBox.shrink(),
+                      GestureDetector(
+                        onTap: () {
+                          Get.toNamed('/notifications');
+                        },
+                        child: const Icon(
+                          Icons.notifications,
+                          color: textColor,
+                          size: 24,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 15),
+                AspectRatio(
+                  aspectRatio: 400 / 350,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Image.asset('assets/centerhouse.png', fit: BoxFit.fill),
+                      const AnimatedFlowChart(),
+                      const EnergyFlowOverlay(),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.add, color: primaryColor, size: 20),
-                        const SizedBox(width: 8),
-                        Text(
-                          'add_device'.tr,
-                          style: TextStyle(
-                            color: primaryColor,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
+                        GestureDetector(
+                          onTap: () async {
+                            final result = await Get.toNamed(
+                              '/scan',
+                              arguments: {
+                                'stationId': controller.selectedStation?.id,
+                                'stationName':
+                                    controller.selectedStation?.stationName,
+                              },
+                            );
+                            if (result == true) {
+                              controller.fetchStations();
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 32,
+                              vertical: 16,
+                            ),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: primaryColor),
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.add, color: primaryColor, size: 20),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'add_device'.tr,
+                                  style: TextStyle(
+                                    color: primaryColor,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
+                        ),
+                        const SizedBox(height: 20),
+                        Text(
+                          'no_device_linked'.tr,
+                          style: TextStyle(color: textLightColor, fontSize: 14),
                         ),
                       ],
                     ),
                   ),
                 ),
-                const SizedBox(height: 20),
-                Text(
-                  'no_device_linked'.tr,
-                  style: TextStyle(color: textLightColor, fontSize: 14),
-                ),
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStationSelector() {
+    return PopupMenuButton<StationModel>(
+      onSelected: (station) {
+        controller.selectStation(station.id ?? '');
+      },
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      itemBuilder: (context) => controller.stations
+          .map(
+            (station) => PopupMenuItem<StationModel>(
+              value: station,
+              child: Text(station.stationName ?? ''),
+            ),
+          )
+          .toList(),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.2),
+          borderRadius: BorderRadius.circular(20),
         ),
-      ],
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              controller.selectedStation?.stationName ?? '',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: textColor,
+              ),
+            ),
+            const SizedBox(width: 4),
+            const Icon(Icons.keyboard_arrow_down, color: textColor, size: 20),
+          ],
+        ),
+      ),
     );
   }
 
   Widget _buildNormalContent() {
+    final data = controller.homeData.value;
+    final ssRateValue = (data?.ssRate ?? 0) / 100;
+    final bsocValue = data?.bsoc ?? 0;
+
     return ListView(
       children: [
         // 顶部按钮栏
@@ -302,51 +386,7 @@ class _HomeTabState extends State<HomeTab> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               // 选择站点按钮
-              PopupMenuButton<StationModel>(
-                onSelected: (station) {
-                  controller.selectStation(station.id ?? '');
-                },
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                itemBuilder: (context) => controller.stations
-                    .map(
-                      (station) => PopupMenuItem<StationModel>(
-                        value: station,
-                        child: Text(station.stationName ?? ''),
-                      ),
-                    )
-                    .toList(),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        controller.selectedStation?.stationName ?? '',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: textColor,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      const Icon(
-                        Icons.keyboard_arrow_down,
-                        color: textColor,
-                        size: 20,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+              _buildStationSelector(),
               // 消息按钮
               GestureDetector(
                 onTap: () {
@@ -362,19 +402,27 @@ class _HomeTabState extends State<HomeTab> {
           ),
         ),
         const SizedBox(height: 15),
-        AspectRatio(
-          aspectRatio: 400 / 350,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              Image.asset('assets/centerhouse.png', fit: BoxFit.fill),
-              const AnimatedFlowChart(),
-              const EnergyFlowOverlay(),
-            ],
-          ),
-        ),
+        Obx(() {
+          final data = controller.homeData.value;
+          return AspectRatio(
+            aspectRatio: 400 / 350,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Image.asset('assets/centerhouse.png', fit: BoxFit.fill),
+                AnimatedFlowChart(
+                  solarValue: data?.solar ?? 0,
+                  gridValue: data?.grid ?? 0,
+                  siteValue: data?.site ?? 0,
+                  evValue: data?.ev ?? 0, // 目前 homeData 中似乎没有 ev 字段，先传 0
+                ),
+                const EnergyFlowOverlay(),
+              ],
+            ),
+          );
+        }),
         Container(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(15),
           child: Column(
             children: [
               //today
@@ -415,7 +463,7 @@ class _HomeTabState extends State<HomeTab> {
               SizedBox(height: 15),
               // 顶部两个主要指标
               Container(
-                padding: EdgeInsets.all(15),
+                padding: EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(12),
@@ -446,7 +494,7 @@ class _HomeTabState extends State<HomeTab> {
                                   alignment: Alignment.center,
                                   children: [
                                     CircularProgressIndicator(
-                                      value: 0.66,
+                                      value: ssRateValue,
                                       strokeWidth: 6,
                                       backgroundColor: primaryColor.withValues(
                                         alpha: 0.15,
@@ -458,7 +506,7 @@ class _HomeTabState extends State<HomeTab> {
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                '66%',
+                                '${(ssRateValue * 100).toInt()}%',
                                 style: TextStyle(
                                   fontSize: 22,
                                   fontWeight: FontWeight.bold,
@@ -491,14 +539,14 @@ class _HomeTabState extends State<HomeTab> {
                           Text(
                             'energy_self_sufficiency_rate'.tr,
                             style: TextStyle(
-                              fontSize: 12,
+                              fontSize: 10,
                               color: textLightColor,
                             ),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: 15),
                     // 电池SOC
                     Expanded(
                       child: Column(
@@ -515,7 +563,7 @@ class _HomeTabState extends State<HomeTab> {
                                 ),
                                 child: Center(
                                   child: Icon(
-                                    getBatteryIcon(batterySoc),
+                                    getBatteryIcon(bsocValue),
                                     color: primaryColor,
                                     size: 22,
                                   ),
@@ -523,7 +571,7 @@ class _HomeTabState extends State<HomeTab> {
                               ),
                               const SizedBox(width: 10),
                               Text(
-                                '${batterySoc}%',
+                                '${bsocValue.toInt()}%',
                                 style: TextStyle(
                                   fontSize: 22,
                                   fontWeight: FontWeight.bold,
@@ -536,7 +584,7 @@ class _HomeTabState extends State<HomeTab> {
                           Text(
                             'battery_soc'.tr,
                             style: TextStyle(
-                              fontSize: 12,
+                              fontSize: 10,
                               color: textLightColor,
                             ),
                           ),
@@ -554,9 +602,9 @@ class _HomeTabState extends State<HomeTab> {
                   // 四个数据卡片
                   GridView.count(
                     crossAxisCount: 2,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                    childAspectRatio: 2,
+                    crossAxisSpacing: 10,
+                    mainAxisSpacing: 10,
+                    childAspectRatio: 2.5,
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     children: selectedIndicators.map((indicatorId) {
@@ -570,25 +618,40 @@ class _HomeTabState extends State<HomeTab> {
                         child: Row(
                           children: [
                             Image.asset(info['icon']),
-                            const SizedBox(width: 10),
+                            const SizedBox(width: 6),
                             Expanded(
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    info['value'],
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                      color: textColor,
+                                  RichText(
+                                    text: TextSpan(
+                                      children: [
+                                        TextSpan(
+                                          text: info['value'],
+                                          style: const TextStyle(
+                                            fontSize: 17,
+                                            fontWeight: FontWeight.bold,
+                                            color: textColor,
+                                          ),
+                                        ),
+                                        const TextSpan(text: ' '),
+                                        TextSpan(
+                                          text: info['unit'],
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.normal,
+                                            color: textLightColor,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
                                     info['name'],
                                     style: TextStyle(
-                                      fontSize: 12,
+                                      fontSize: 10,
                                       color: textLightColor,
                                     ),
                                   ),

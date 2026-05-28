@@ -24,92 +24,92 @@ class _NotificationsPageState extends State<NotificationsPage> {
 
   // 设备消息列表
   final List<NotificationItem> _deviceNotifications = [
-    NotificationItem(
-      id: 1,
-      title: 'Fan Speed Too Low',
-      content: 'If the issue persists, please contact the customer service.',
-      site: 'Sunbox',
-      time: 'Feb 26, 2026 05:08',
-      type: 'Warning',
-      read: false,
-    ),
-    NotificationItem(
-      id: 2,
-      title: 'Warning Recovery',
-      content:
-          'The warning has been resolved, and the device is now functioning normally.',
-      site: 'Sunbox',
-      time: 'Jan 28, 2026 10:15',
-      type: 'Recovery',
-      read: true,
-    ),
-    NotificationItem(
-      id: 3,
-      title: 'Fan Speed Too Low',
-      content: 'If the issue persists, please contact the customer service.',
-      site: 'Sunbox',
-      time: 'Jan 21, 2026 08:45',
-      type: 'Warning',
-      read: true,
-    ),
-    NotificationItem(
-      id: 4,
-      title: 'Connected',
-      content: 'The device is successfully connected and functioning properly.',
-      site: 'Sunbox',
-      time: 'Dec 9, 2025 07:08',
-      type: 'Info',
-      read: true,
-    ),
+    // NotificationItem(
+    //   id: 1,
+    //   title: 'Fan Speed Too Low',
+    //   content: 'If the issue persists, please contact the customer service.',
+    //   site: 'Sunbox',
+    //   time: 'Feb 26, 2026 05:08',
+    //   type: 'Warning',
+    //   read: false,
+    // ),
+    // NotificationItem(
+    //   id: 2,
+    //   title: 'Warning Recovery',
+    //   content:
+    //       'The warning has been resolved, and the device is now functioning normally.',
+    //   site: 'Sunbox',
+    //   time: 'Jan 28, 2026 10:15',
+    //   type: 'Recovery',
+    //   read: true,
+    // ),
+    // NotificationItem(
+    //   id: 3,
+    //   title: 'Fan Speed Too Low',
+    //   content: 'If the issue persists, please contact the customer service.',
+    //   site: 'Sunbox',
+    //   time: 'Jan 21, 2026 08:45',
+    //   type: 'Warning',
+    //   read: true,
+    // ),
+    // NotificationItem(
+    //   id: 4,
+    //   title: 'Connected',
+    //   content: 'The device is successfully connected and functioning properly.',
+    //   site: 'Sunbox',
+    //   time: 'Dec 9, 2025 07:08',
+    //   type: 'Info',
+    //   read: true,
+    // ),
   ];
 
   // 系统消息列表
   final List<NotificationItem> _systemNotifications = [
-    NotificationItem(
-      id: 1,
-      title: 'OTA Update Successfully',
-      content: 'Your device has been successfully updated to 12.0',
-      site: 'Sunbox',
-      time: 'Dec 2, 2025 12:42',
-      type: 'Info',
-      read: false,
-    ),
-    NotificationItem(
-      id: 2,
-      title: 'OTA Update Successfully',
-      content: 'Your device has been successfully updated to 11.6',
-      site: 'Sunbox',
-      time: 'Nov 1, 2025 12:41',
-      type: 'Info',
-      read: true,
-    ),
-    NotificationItem(
-      id: 3,
-      title: 'OTA Update Successfully',
-      content: 'Your device has been successfully updated to 11.5.1',
-      site: 'Sunbox',
-      time: 'Apr 5, 2025 09:19',
-      type: 'Info',
-      read: true,
-    ),
-    NotificationItem(
-      id: 4,
-      title: 'OTA Update Successfully',
-      content: 'Your device has been successfully updated to 11.5.0',
-      site: 'Sunbox',
-      time: 'Apr 1, 2025 09:19',
-      type: 'Info',
-      read: true,
-    ),
-    NotificationItem(
-      id: 5,
-      title: 'OTA Update Successfully',
-      content: 'Your device has been successfully updated to 11.4',
-      site: 'Sunbox',
-      time: 'Mar 15, 2025 09:19',
-      type: 'Info',
-      read: true,
-    ),
+    // NotificationItem(
+    //   id: 1,
+    //   title: 'OTA Update Successfully',
+    //   content: 'Your device has been successfully updated to 12.0',
+    //   site: 'Sunbox',
+    //   time: 'Dec 2, 2025 12:42',
+    //   type: 'Info',
+    //   read: false,
+    // ),
+    // NotificationItem(
+    //   id: 2,
+    //   title: 'OTA Update Successfully',
+    //   content: 'Your device has been successfully updated to 11.6',
+    //   site: 'Sunbox',
+    //   time: 'Nov 1, 2025 12:41',
+    //   type: 'Info',
+    //   read: true,
+    // ),
+    // NotificationItem(
+    //   id: 3,
+    //   title: 'OTA Update Successfully',
+    //   content: 'Your device has been successfully updated to 11.5.1',
+    //   site: 'Sunbox',
+    //   time: 'Apr 5, 2025 09:19',
+    //   type: 'Info',
+    //   read: true,
+    // ),
+    // NotificationItem(
+    //   id: 4,
+    //   title: 'OTA Update Successfully',
+    //   content: 'Your device has been successfully updated to 11.5.0',
+    //   site: 'Sunbox',
+    //   time: 'Apr 1, 2025 09:19',
+    //   type: 'Info',
+    //   read: true,
+    // ),
+    // NotificationItem(
+    //   id: 5,
+    //   title: 'OTA Update Successfully',
+    //   content: 'Your device has been successfully updated to 11.4',
+    //   site: 'Sunbox',
+    //   time: 'Mar 15, 2025 09:19',
+    //   type: 'Info',
+    //   read: true,
+    // ),
   ];
 
   // 清除未读消息
@@ -344,27 +344,27 @@ class _NotificationsPageState extends State<NotificationsPage> {
             ),
             const SizedBox(height: 1),
             // 站点选择
-            Container(
-              color: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              child: GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _showSiteDropdown = !_showSiteDropdown;
-                  });
-                },
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      _selectedSite,
-                      style: TextStyle(fontSize: 14, color: textColor),
-                    ),
-                    const Icon(Icons.keyboard_arrow_down, color: textColor),
-                  ],
-                ),
-              ),
-            ),
+            // Container(
+            //   color: Colors.white,
+            //   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            //   child: GestureDetector(
+            //     onTap: () {
+            //       setState(() {
+            //         _showSiteDropdown = !_showSiteDropdown;
+            //       });
+            //     },
+            //     child: Row(
+            //       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            //       children: [
+            //         Text(
+            //           _selectedSite,
+            //           style: TextStyle(fontSize: 14, color: textColor),
+            //         ),
+            //         const Icon(Icons.keyboard_arrow_down, color: textColor),
+            //       ],
+            //     ),
+            //   ),
+            // ),
             // 站点下拉菜单
             if (_showSiteDropdown)
               Container(

@@ -1,6 +1,14 @@
+import 'dart:io';
+import 'dart:convert' as convert;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../../utils/constants.dart';
+import '../../../utils/network/api_service.dart';
+import '../../../utils/toast_utils.dart';
+import '../../../utils/storage.dart';
+import '../../../controllers/station_controller.dart';
+import '../../../model/device_model.dart';
 
 class NewTicketPage extends StatefulWidget {
   const NewTicketPage({super.key});
@@ -17,6 +25,223 @@ class _NewTicketPageState extends State<NewTicketPage> {
   // 设备选择
   bool _showDeviceSelector = false;
 
+  String _userEmail = '';
+  String _userPhone = '';
+
+  final TextEditingController _descriptionController = TextEditingController();
+  final TextEditingController _contactController = TextEditingController();
+
+  final List<File> _selectedImages = [];
+  final ImagePicker _picker = ImagePicker();
+
+  DeviceModel? _selectedDevice;
+  final StationController _stationController = Get.find<StationController>();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserInfo();
+  }
+
+  void _loadUserInfo() {
+    final userInfoJson = GlobalStorage.getLoginInfo();
+    if (userInfoJson != null && userInfoJson.isNotEmpty) {
+      try {
+        final userInfo =
+            convert.jsonDecode(userInfoJson) as Map<String, dynamic>;
+        _userEmail = userInfo['email']?.toString() ?? '';
+        _userPhone =
+            userInfo['phonenumber']?.toString() ??
+            userInfo['phone']?.toString() ??
+            '';
+
+        // 默认填充邮箱
+        if (_userEmail.isNotEmpty) {
+          _contactController.text = _userEmail;
+        }
+      } catch (e) {
+        // Ignore parsing error
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _descriptionController.dispose();
+    _contactController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: source,
+        imageQuality: 80,
+      );
+      if (image != null) {
+        setState(() {
+          _selectedImages.add(File(image.path));
+        });
+      }
+    } catch (e) {
+      ToastUtils.error('pick_image_failed'.tr);
+    }
+  }
+
+  void _showImageSourceSheet() {
+    Get.bottomSheet(
+      Container(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: Text('take_photo'.tr),
+              onTap: () {
+                Get.back();
+                _pickImage(ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: Text('choose_from_gallery'.tr),
+              onTap: () {
+                Get.back();
+                _pickImage(ImageSource.gallery);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _submit() async {
+    final description = _descriptionController.text.trim();
+    final contactInfo = _contactController.text.trim();
+
+    if (description.isEmpty) {
+      ToastUtils.warning('please_enter_description'.tr);
+      return;
+    }
+
+    if (contactInfo.isEmpty) {
+      ToastUtils.warning('please_enter_contact'.tr);
+      return;
+    }
+
+    if (_ticketType == 1 && _selectedDevice == null) {
+      ToastUtils.warning('please_select_device'.tr);
+      return;
+    }
+
+    try {
+      Get.dialog(
+        const Center(child: CircularProgressIndicator()),
+        barrierDismissible: false,
+      );
+
+      // 1. 上传图片
+      List<String> imageUrls = [];
+      for (var imageFile in _selectedImages) {
+        Map<String, dynamic> uploadData = {'source': 'application'};
+        final uploadResult = await ApiService.uploadImage(
+          imageFile.path,
+          data: uploadData,
+        );
+        if (uploadResult['code'] == 200) {
+          // 假设返回的数据中有 url 字段
+          final url = uploadResult['data']?['fileUrl'];
+          if (url != null) {
+            imageUrls.add(url);
+          }
+        }
+      }
+
+      // 2. 提交工单
+      final Map<String, dynamic> data = {
+        'ticketType': (_ticketType + 1).toString(), // 1咨询 2设备问题
+        'remark': description,
+        'contactType': _contactType + 1, // 1邮箱 2电话
+        'contact': contactInfo,
+        'picture': imageUrls.join(','),
+        if (_ticketType == 2 && _selectedDevice != null) ...{
+          'deviceId': _selectedDevice!.id,
+          // 'stationId': int.tryParse(_selectedDevice!.stationId ?? '') ?? 0,
+        },
+      };
+
+      final result = await ApiService.addWorkOrder(data);
+      Get.back(); // 关闭进度弹窗
+
+      if (result['code'] == 200) {
+        Get.back(result: true); // 返回上一页并通知刷新
+        ToastUtils.success('submit_success'.tr);
+      } else {
+        ToastUtils.error(result['msg'] ?? 'submit_failed'.tr);
+      }
+    } catch (e) {
+      Get.back();
+      ToastUtils.error('submit_failed'.tr);
+    }
+  }
+
+  void _showDeviceList() {
+    if (_stationController.devices.isEmpty) {
+      ToastUtils.info('no_devices'.tr);
+      return;
+    }
+
+    Get.bottomSheet(
+      Container(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        constraints: BoxConstraints(maxHeight: Get.height * 0.7),
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                'select_device'.tr,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            Expanded(
+              child: ListView.builder(
+                itemCount: _stationController.devices.length,
+                itemBuilder: (context, index) {
+                  final device = _stationController.devices[index];
+                  return ListTile(
+                    leading: const Icon(Icons.devices, color: primaryColor),
+                    title: Text(device.deviceType ?? 'unknown'.tr),
+                    subtitle: Text('SN: ${device.deviceCode ?? ''}'),
+                    onTap: () {
+                      setState(() {
+                        _selectedDevice = device;
+                      });
+                      Get.back();
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -30,9 +255,9 @@ class _NewTicketPageState extends State<NewTicketPage> {
             Get.back();
           },
         ),
-        title: const Text(
-          'New Ticket',
-          style: TextStyle(
+        title: Text(
+          'new_ticket'.tr,
+          style: const TextStyle(
             color: textColor,
             fontSize: 18,
             fontWeight: FontWeight.w600,
@@ -47,9 +272,9 @@ class _NewTicketPageState extends State<NewTicketPage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 // 工单类型
-                const Text(
-                  'Ticket Type',
-                  style: TextStyle(
+                Text(
+                  'ticket_type'.tr,
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
                     color: textColor,
@@ -92,7 +317,7 @@ class _NewTicketPageState extends State<NewTicketPage> {
                                 },
                                 activeColor: primaryColor,
                               ),
-                              const Text('Inquiry'),
+                              Text('inquiry'.tr),
                             ],
                           ),
                         ),
@@ -133,7 +358,7 @@ class _NewTicketPageState extends State<NewTicketPage> {
                                 },
                                 activeColor: primaryColor,
                               ),
-                              const Text('Device Issue'),
+                              Text('device_issue'.tr),
                             ],
                           ),
                         ),
@@ -149,75 +374,67 @@ class _NewTicketPageState extends State<NewTicketPage> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const Text(
-                        'Device',
-                        style: TextStyle(
+                      Text(
+                        'device'.tr,
+                        style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w500,
                           color: textColor,
                         ),
                       ),
                       const SizedBox(height: 12),
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: borderColor),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 48,
-                              height: 48,
-                              decoration: BoxDecoration(
-                                color: primaryColor.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Center(
-                                child: Icon(
-                                  Icons.devices,
-                                  color: primaryColor,
-                                  size: 24,
+                      GestureDetector(
+                        onTap: _showDeviceList,
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: borderColor),
+                            borderRadius: BorderRadius.circular(8),
+                            color: Colors.white,
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 48,
+                                height: 48,
+                                decoration: BoxDecoration(
+                                  color: primaryColor.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Center(
+                                  child: Icon(
+                                    Icons.devices,
+                                    color: primaryColor,
+                                    size: 24,
+                                  ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text('SunBox-H'),
-                                  const Text(
-                                    'SN:00212001249240444',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: textLightColor,
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      _selectedDevice?.deviceType ??
+                                          'select_device'.tr,
                                     ),
-                                  ),
-                                ],
+                                    if (_selectedDevice != null)
+                                      Text(
+                                        'SN: ${_selectedDevice!.deviceCode ?? ''}',
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          color: textLightColor,
+                                        ),
+                                      ),
+                                  ],
+                                ),
                               ),
-                            ),
-                            Row(
-                              children: [
-                                Container(
-                                  width: 8,
-                                  height: 8,
-                                  decoration: const BoxDecoration(
-                                    color: Colors.green,
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                                const SizedBox(width: 4),
-                                const Text(
-                                  'Online',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: textLightColor,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
+                              const Icon(
+                                Icons.keyboard_arrow_down,
+                                color: textLightColor,
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                       const SizedBox(height: 24),
@@ -225,9 +442,9 @@ class _NewTicketPageState extends State<NewTicketPage> {
                   ),
 
                 // 详细描述
-                const Text(
-                  'Detailed Description',
-                  style: TextStyle(
+                Text(
+                  'detailed_description'.tr,
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
                     color: textColor,
@@ -235,9 +452,10 @@ class _NewTicketPageState extends State<NewTicketPage> {
                 ),
                 const SizedBox(height: 12),
                 TextField(
+                  controller: _descriptionController,
                   maxLines: 5,
                   decoration: InputDecoration(
-                    hintText: 'Please describe your problem in detail...',
+                    hintText: 'please_describe_problem'.tr,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                       borderSide: const BorderSide(color: borderColor),
@@ -246,46 +464,105 @@ class _NewTicketPageState extends State<NewTicketPage> {
                       borderRadius: BorderRadius.circular(8),
                       borderSide: const BorderSide(color: primaryColor),
                     ),
+                    fillColor: Colors.white,
+                    filled: true,
                   ),
                 ),
 
                 const SizedBox(height: 24),
 
                 // 上传图片
-                const Text(
-                  'Upload Images',
-                  style: TextStyle(
+                Text(
+                  'upload_images'.tr,
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
                     color: textColor,
                   ),
                 ),
                 const SizedBox(height: 12),
-                Container(
-                  width: 100,
-                  height: 100,
-                  decoration: BoxDecoration(
-                    border: Border.all(color: borderColor),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.add_photo_alternate, color: textLightColor),
-                        SizedBox(height: 4),
-                        Text('+', style: TextStyle(color: textLightColor)),
-                      ],
-                    ),
-                  ),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    ...List.generate(_selectedImages.length, (index) {
+                      return Stack(
+                        children: [
+                          Container(
+                            width: 100,
+                            height: 100,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                              image: DecorationImage(
+                                image: FileImage(_selectedImages[index]),
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            top: 4,
+                            right: 4,
+                            child: GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _selectedImages.removeAt(index);
+                                });
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: const BoxDecoration(
+                                  color: Colors.black54,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.close,
+                                  color: Colors.white,
+                                  size: 16,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    }),
+                    if (_selectedImages.length < 5)
+                      GestureDetector(
+                        onTap: _showImageSourceSheet,
+                        child: Container(
+                          width: 100,
+                          height: 100,
+                          decoration: BoxDecoration(
+                            border: Border.all(color: borderColor),
+                            borderRadius: BorderRadius.circular(8),
+                            color: Colors.white,
+                          ),
+                          child: const Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.add_photo_alternate,
+                                  color: textLightColor,
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  '+',
+                                  style: TextStyle(color: textLightColor),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
 
                 const SizedBox(height: 24),
 
                 // 联系方式
-                const Text(
-                  'Contact',
-                  style: TextStyle(
+                Text(
+                  'contact'.tr,
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
                     color: textColor,
@@ -299,6 +576,7 @@ class _NewTicketPageState extends State<NewTicketPage> {
                         onTap: () {
                           setState(() {
                             _contactType = 0;
+                            _contactController.text = _userEmail;
                           });
                         },
                         child: Container(
@@ -322,11 +600,12 @@ class _NewTicketPageState extends State<NewTicketPage> {
                                 onChanged: (value) {
                                   setState(() {
                                     _contactType = 0;
+                                    _contactController.text = _userEmail;
                                   });
                                 },
                                 activeColor: primaryColor,
                               ),
-                              const Text('Email'),
+                              Text('email'.tr),
                             ],
                           ),
                         ),
@@ -338,6 +617,7 @@ class _NewTicketPageState extends State<NewTicketPage> {
                         onTap: () {
                           setState(() {
                             _contactType = 1;
+                            _contactController.text = _userPhone;
                           });
                         },
                         child: Container(
@@ -361,11 +641,12 @@ class _NewTicketPageState extends State<NewTicketPage> {
                                 onChanged: (value) {
                                   setState(() {
                                     _contactType = 1;
+                                    _contactController.text = _userPhone;
                                   });
                                 },
                                 activeColor: primaryColor,
                               ),
-                              const Text('Phone'),
+                              Text('phone'.tr),
                             ],
                           ),
                         ),
@@ -376,11 +657,16 @@ class _NewTicketPageState extends State<NewTicketPage> {
 
                 const SizedBox(height: 12),
 
-                // 邮箱输入
+                // 联系方式输入
                 TextField(
-                  keyboardType: TextInputType.emailAddress,
+                  controller: _contactController,
+                  keyboardType: _contactType == 0
+                      ? TextInputType.emailAddress
+                      : TextInputType.phone,
                   decoration: InputDecoration(
-                    hintText: 'Enter your email address',
+                    hintText: _contactType == 0
+                        ? 'enter_email'.tr
+                        : 'enter_phone'.tr,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                       borderSide: const BorderSide(color: borderColor),
@@ -389,21 +675,16 @@ class _NewTicketPageState extends State<NewTicketPage> {
                       borderRadius: BorderRadius.circular(8),
                       borderSide: const BorderSide(color: primaryColor),
                     ),
-                    suffixIcon: const Icon(
-                      Icons.check_circle,
-                      color: Colors.green,
-                    ),
+                    fillColor: Colors.white,
+                    filled: true,
                   ),
-                  controller: TextEditingController(text: '957123562@qq.com'),
                 ),
 
                 const SizedBox(height: 40),
 
                 // 提交按钮
                 ElevatedButton(
-                  onPressed: () {
-                    // 处理提交逻辑
-                  },
+                  onPressed: _submit,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryColor,
                     padding: const EdgeInsets.symmetric(vertical: 16),
@@ -411,9 +692,9 @@ class _NewTicketPageState extends State<NewTicketPage> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: const Text(
-                    'Submit',
-                    style: TextStyle(
+                  child: Text(
+                    'submit'.tr,
+                    style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,

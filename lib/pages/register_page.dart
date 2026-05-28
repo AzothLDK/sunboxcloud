@@ -206,24 +206,12 @@ class _RegisterPageState extends State<RegisterPage> {
       final response = await ApiService.register(encryptedData);
 
       if (response['code'] == 200) {
-        Get.dialog(
-          AlertDialog(
-            title: Text('success'.tr),
-            content: Text('register_success'.tr),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Get.back();
-                  Get.offNamed(AppRoutes.login);
-                },
-                child: Text(
-                  'confirm'.tr,
-                  style: TextStyle(color: primaryColor),
-                ),
-              ),
-            ],
-          ),
-          barrierDismissible: false,
+        Get.offNamed(
+          AppRoutes.registerSuccess,
+          arguments: {
+            'email': _verifiedEmail,
+            'password': password,
+          },
         );
       } else {
         ToastUtils.error(response['msg'] ?? 'register_failed'.tr);

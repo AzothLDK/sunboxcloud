@@ -6,6 +6,7 @@ class StationModel {
   final String? location;
   final String? detailAddress;
   final String? createTime;
+  final List<RegionNode>? regionNodes;
 
   StationModel({
     this.id,
@@ -15,6 +16,7 @@ class StationModel {
     this.location,
     this.detailAddress,
     this.createTime,
+    this.regionNodes,
   });
 
   factory StationModel.fromJson(Map<String, dynamic> json) {
@@ -26,6 +28,9 @@ class StationModel {
       location: json['location']?.toString(),
       detailAddress: json['detailAddress']?.toString(),
       createTime: json['createTime']?.toString(),
+      regionNodes: (json['regionNodes'] as List?)
+          ?.map((e) => RegionNode.fromJson(e))
+          .toList(),
     );
   }
 
@@ -38,6 +43,22 @@ class StationModel {
       'location': location,
       'detailAddress': detailAddress,
       'createTime': createTime,
+      'regionNodes': regionNodes?.map((e) => e.toJson()).toList(),
     };
+  }
+}
+
+class RegionNode {
+  final int? id;
+  final String? name;
+
+  RegionNode({this.id, this.name});
+
+  factory RegionNode.fromJson(Map<String, dynamic> json) {
+    return RegionNode(id: json['id'] as int?, name: json['name']?.toString());
+  }
+
+  Map<String, dynamic> toJson() {
+    return {'id': id, 'name': name};
   }
 }

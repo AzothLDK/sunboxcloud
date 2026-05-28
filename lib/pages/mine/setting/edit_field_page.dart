@@ -7,6 +7,7 @@ import '../../../utils/constants.dart';
 import '../../../utils/storage.dart';
 import '../../../utils/network/api_service.dart';
 import '../../../utils/toast_utils.dart';
+import '../../../controllers/auth_controller.dart';
 import 'package:dio/dio.dart';
 
 enum EditFieldType { username, address, phone }
@@ -143,9 +144,12 @@ class _EditFieldPageState extends State<EditFieldPage> {
       final response = await ApiService.editUser(formData);
 
       if (response['code'] == 200) {
-        _updateLocalUserInfo();
+        // 使用封装好的 GetX 方法重新获取并更新用户信息
+        final authController = Get.find<AuthController>();
+        await authController.fetchUserInfoAndRouters();
+
         Get.back(result: _controller.text.trim());
-        ToastUtils.success('saved_successfully'.tr);
+        ToastUtils.success('save_successfully'.tr);
       } else {
         ToastUtils.error(response['msg'] ?? 'save_failed'.tr);
       }

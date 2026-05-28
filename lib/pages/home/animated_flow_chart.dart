@@ -4,7 +4,18 @@ const double kDesignWidth = 400.0;
 const double kDesignHeight = 350.0;
 
 class AnimatedFlowChart extends StatefulWidget {
-  const AnimatedFlowChart({super.key});
+  final double solarValue;
+  final double gridValue;
+  final double siteValue;
+  final double evValue;
+
+  const AnimatedFlowChart({
+    super.key,
+    this.solarValue = 0,
+    this.gridValue = 0,
+    this.siteValue = 0,
+    this.evValue = 0,
+  });
 
   @override
   State<AnimatedFlowChart> createState() => _AnimatedFlowChartState();
@@ -19,7 +30,7 @@ class _AnimatedFlowChartState extends State<AnimatedFlowChart>
     super.initState();
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 500),
+      duration: const Duration(milliseconds: 1000),
     )..repeat();
   }
 
@@ -44,6 +55,10 @@ class _AnimatedFlowChartState extends State<AnimatedFlowChart>
                 progress: _animationController.value,
                 width: width,
                 height: height,
+                solarValue: widget.solarValue,
+                gridValue: widget.gridValue,
+                siteValue: widget.siteValue,
+                evValue: widget.evValue,
               ),
             );
           },
@@ -57,11 +72,19 @@ class FlowChartPainter extends CustomPainter {
   final double progress;
   final double width;
   final double height;
+  final double solarValue;
+  final double gridValue;
+  final double siteValue;
+  final double evValue;
 
   FlowChartPainter({
     required this.progress,
     required this.width,
     required this.height,
+    this.solarValue = 0,
+    this.gridValue = 0,
+    this.siteValue = 0,
+    this.evValue = 0,
   });
 
   double sx(double x) => x / kDesignWidth * width;
@@ -70,6 +93,7 @@ class FlowChartPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    // EV 线条
     _drawAnimatedFlowLine(
       canvas: canvas,
       nodes: [
@@ -80,32 +104,39 @@ class FlowChartPainter extends CustomPainter {
         so(160, 240),
       ],
       thickness: sy(6),
-      baseColor: Colors.blue.withOpacity(0.2),
-      flowColor: Colors.lightBlueAccent,
+      baseColor: Colors.blue.withValues(alpha: 0.2),
+      flowColor: Colors.lightBlue,
+      isFlowing: evValue > 0,
     );
 
+    // Site 线条
     _drawAnimatedFlowLine(
       canvas: canvas,
-      nodes: [so(265, 250), so(265, 230), so(150, 208), so(150, 160)],
+      nodes: [so(265, 250), so(265, 230), so(190, 215), so(190, 190)],
       thickness: sy(6),
-      baseColor: Colors.blue.withOpacity(0.2),
-      flowColor: Colors.lightBlueAccent,
+      baseColor: Colors.blue.withValues(alpha: 0.2),
+      flowColor: Colors.lightBlue,
+      isFlowing: siteValue > 0,
     );
 
+    // Solar 线条
     _drawAnimatedFlowLine(
       canvas: canvas,
       nodes: [so(280, 140), so(280, 250)],
       thickness: sy(6),
-      baseColor: Colors.blue.withOpacity(0.3),
-      flowColor: Colors.lightBlueAccent,
+      baseColor: Colors.blue.withValues(alpha: 0.3),
+      flowColor: Colors.lightBlue,
+      isFlowing: solarValue > 0,
     );
 
+    // Grid 线条
     _drawAnimatedFlowLine(
       canvas: canvas,
       nodes: [so(350, 150), so(350, 250), so(290, 285)],
       thickness: sy(6),
-      baseColor: Colors.blue.withOpacity(0.3),
-      flowColor: Colors.lightBlueAccent,
+      baseColor: Colors.blue.withValues(alpha: 0.3),
+      flowColor: Colors.lightBlue,
+      isFlowing: gridValue > 0,
     );
   }
 
@@ -133,6 +164,7 @@ class FlowChartPainter extends CustomPainter {
     required double thickness,
     required Color baseColor,
     required Color flowColor,
+    bool isFlowing = true,
   }) {
     if (nodes.length < 2) return;
 
@@ -149,6 +181,8 @@ class FlowChartPainter extends CustomPainter {
       ..strokeWidth = thickness
       ..strokeCap = StrokeCap.round;
     canvas.drawPath(path, basePaint);
+
+    if (!isFlowing) return;
 
     final flowPaint = Paint()
       ..color = flowColor
