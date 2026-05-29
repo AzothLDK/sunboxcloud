@@ -1,21 +1,77 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../utils/constants.dart';
+import '../../utils/network/api_service.dart';
+import '../../utils/toast_utils.dart';
+import 'dart:developer' as developer;
 
 class BackupReservePage extends StatefulWidget {
-  const BackupReservePage({super.key});
+  final int batterySpare;
+  final String deviceCode;
+
+  const BackupReservePage({
+    super.key,
+    this.batterySpare = 20,
+    this.deviceCode = '',
+  });
 
   @override
   State<BackupReservePage> createState() => _BackupReservePageState();
 }
 
 class _BackupReservePageState extends State<BackupReservePage> {
-  bool _isEnabled = true;
-  double _progress = 0.1; // 初始值 10% (0.05 到 0.5)
+  late bool _isEnabled;
+  late double _progress;
 
-  // 定义 SOC 的范围
-  final double _minSoc = 0.05;
-  final double _maxSoc = 0.5;
+  final double _minSoc = 5.0;
+  final double _maxSoc = 50.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _isEnabled = true;
+    _progress = widget.batterySpare.toDouble().clamp(_minSoc, _maxSoc);
+  }
+
+  Future<void> _submitSettings() async {
+    if (widget.deviceCode.isEmpty) {
+      ToastUtils.error('device_code_empty'.tr);
+      return;
+    }
+
+    try {
+      Get.dialog(
+        const Center(child: CircularProgressIndicator()),
+        barrierDismissible: false,
+      );
+
+      final rpcType = _isEnabled ? 1 : 2;
+      final value = _progress.round();
+
+      final response = await ApiService.rpcControl({
+        'deviceCode': widget.deviceCode,
+        'rpcType': rpcType,
+        'value': value,
+      });
+
+      Get.back();
+
+      if (response['code'] == 200) {
+        ToastUtils.success('settings_saved_success'.tr);
+        Get.back(result: true);
+      } else {
+        ToastUtils.error(response['msg'] ?? 'settings_saved_failed'.tr);
+      }
+    } catch (e) {
+      Get.back();
+      developer.log(
+        'Submit settings failed: $e',
+        name: 'BackupReservePage',
+        error: e,
+      );
+      ToastUtils.error('network_error'.tr);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -117,7 +173,7 @@ class _BackupReservePageState extends State<BackupReservePage> {
                                   ),
                                 ),
                                 Text(
-                                  '${(_progress * 100).round()}%',
+                                  '${_progress.round()}%',
                                   style: const TextStyle(
                                     fontSize: 24,
                                     fontWeight: FontWeight.bold,
@@ -138,16 +194,13 @@ class _BackupReservePageState extends State<BackupReservePage> {
                 ),
               ),
             ),
-            // 底部确认按钮
             Padding(
               padding: const EdgeInsets.all(20.0),
               child: SizedBox(
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  onPressed: () {
-                    Get.back();
-                  },
+                  onPressed: _submitSettings,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryColor,
                     shape: RoundedRectangleBorder(

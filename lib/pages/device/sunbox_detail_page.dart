@@ -1170,137 +1170,71 @@ class _SunBoxDetailPageState extends State<SunBoxDetailPage> {
     );
   }
 
-  // 设置标签页
   Widget _buildSettingsTab() {
-    return Container(
-      height: 120,
-      padding: const EdgeInsets.all(10),
-      child: ListView(
-        children: [
-          // // 网络状态
-          // Container(
-          //   padding: const EdgeInsets.all(16),
-          //   decoration: BoxDecoration(
-          //     color: Colors.white,
-          //     borderRadius: BorderRadius.circular(8),
-          //   ),
-          //   child: Row(
-          //     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          //     children: [
-          //       Row(
-          //         children: [
-          //           const Icon(Icons.wifi, color: Colors.grey, size: 20),
-          //           const SizedBox(width: 12),
-          //           const Text('Network'),
-          //         ],
-          //       ),
-          //       Row(
-          //         children: [
-          //           Text(
-          //             'Connected',
-          //             style: TextStyle(
-          //               color: primaryColor,
-          //               fontWeight: FontWeight.bold,
-          //             ),
-          //           ),
-          //           const SizedBox(width: 4),
-          //           const Icon(
-          //             Icons.keyboard_arrow_right,
-          //             color: primaryColor,
-          //             size: 16,
-          //           ),
-          //         ],
-          //       ),
-          //     ],
-          //   ),
-          // ),
-          // const SizedBox(height: 10),
-          // // 运行模式
-          // Container(
-          //   padding: const EdgeInsets.all(16),
-          //   decoration: BoxDecoration(
-          //     color: Colors.white,
-          //     borderRadius: BorderRadius.circular(8),
-          //   ),
-          //   child: Row(
-          //     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          //     children: [
-          //       Row(
-          //         children: [
-          //           const Icon(Icons.settings, color: Colors.grey, size: 20),
-          //           const SizedBox(width: 12),
-          //           const Text('Operational Mode'),
-          //         ],
-          //       ),
-          //       Row(
-          //         children: [
-          //           Text(
-          //             'Self-Consumption',
-          //             style: TextStyle(
-          //               color: primaryColor,
-          //               fontWeight: FontWeight.bold,
-          //             ),
-          //           ),
-          //           const SizedBox(width: 4),
-          //           const Icon(
-          //             Icons.keyboard_arrow_right,
-          //             color: primaryColor,
-          //             size: 16,
-          //           ),
-          //         ],
-          //       ),
-          //     ],
-          //   ),
-          // ),
-          const SizedBox(height: 10),
-          // 备份储备
-          GestureDetector(
-            onTap: () {
-              Get.to(const BackupReservePage());
-            },
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.battery_std,
-                        color: Colors.grey,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 12),
-                      Text('BSU Protection'.tr),
-                    ],
+    return Obx(() {
+      final meterData = controller.meterData.value;
+      final batterySpare = meterData?['batterySpare'] ?? 20.0;
+      final batterySparePercent = (batterySpare as num).toInt();
+
+      return Container(
+        height: 120,
+        padding: const EdgeInsets.all(10),
+        child: ListView(
+          children: [
+            const SizedBox(height: 10),
+            GestureDetector(
+              onTap: () {
+                Get.to(
+                  BackupReservePage(
+                    batterySpare: batterySparePercent,
+                    deviceCode: widget.deviceId ?? '',
                   ),
-                  Row(
-                    children: [
-                      Text(
-                        '20%',
-                        style: TextStyle(
-                          color: primaryColor,
-                          fontWeight: FontWeight.bold,
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.battery_std,
+                          color: Colors.grey,
+                          size: 20,
                         ),
-                      ),
-                      const SizedBox(width: 4),
-                      const Icon(
-                        Icons.keyboard_arrow_right,
-                        color: primaryColor,
-                        size: 16,
-                      ),
-                    ],
-                  ),
-                ],
+                        const SizedBox(width: 12),
+                        Text('BSU Protection'.tr),
+                      ],
+                    ),
+                    Row(
+                      children: [
+                        Text(
+                          '$batterySparePercent%',
+                          style: TextStyle(
+                            color: primaryColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        const Icon(
+                          Icons.keyboard_arrow_right,
+                          color: primaryColor,
+                          size: 16,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
-      ),
-    );
+          ],
+        ),
+      );
+    });
   }
 }

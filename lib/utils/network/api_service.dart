@@ -259,4 +259,8 @@ class ApiService {
       queryParameters: {'deviceId': deviceId, 'updateTime': updateTime},
     );
   }
+
+  static Future<Map<String, dynamic>> rpcControl(Map<String, dynamic> data) {
+    return _httpManager.post('/hems/common/rpc', data: data);
+  }
 }
