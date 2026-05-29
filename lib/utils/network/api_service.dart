@@ -260,7 +260,9 @@ class ApiService {
     );
   }
 
-  static Future<Map<String, dynamic>> rpcControl(Map<String, dynamic> data) {
+  static Future<Map<String, dynamic>> rpcControl(
+    Map<String, dynamic> data,
+  ) {
     return _httpManager.post('/hems/common/rpc', data: data);
   }
 }
