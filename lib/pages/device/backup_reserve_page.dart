@@ -38,7 +38,6 @@ class _BackupReservePageState extends State<BackupReservePage> {
       ToastUtils.error('device_code_empty'.tr);
       return;
     }
-
     try {
       Get.dialog(
         const Center(child: CircularProgressIndicator()),
@@ -121,47 +120,47 @@ class _BackupReservePageState extends State<BackupReservePage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           // 顶部开关行
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'enable_low_battery_protection'.tr,
-                                      style: const TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                        color: textColor,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'low_battery_protection_desc'.tr,
-                                      style: const TextStyle(
-                                        fontSize: 13,
-                                        color: textLightColor,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Switch(
-                                value: _isEnabled,
-                                activeColor: primaryColor,
-                                onChanged: (val) {
-                                  setState(() {
-                                    _isEnabled = val;
-                                  });
-                                },
-                              ),
-                            ],
-                          ),
+                          // Row(
+                          //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          //   children: [
+                          //     Expanded(
+                          //       child: Column(
+                          //         crossAxisAlignment: CrossAxisAlignment.start,
+                          //         children: [
+                          //           Text(
+                          //             'enable_low_battery_protection'.tr,
+                          //             style: const TextStyle(
+                          //               fontSize: 18,
+                          //               fontWeight: FontWeight.bold,
+                          //               color: textColor,
+                          //             ),
+                          //           ),
+                          //           const SizedBox(height: 4),
+                          //           Text(
+                          //             'low_battery_protection_desc'.tr,
+                          //             style: const TextStyle(
+                          //               fontSize: 13,
+                          //               color: textLightColor,
+                          //             ),
+                          //           ),
+                          //         ],
+                          //       ),
+                          //     ),
+                          //     Switch(
+                          //       value: _isEnabled,
+                          //       activeColor: primaryColor,
+                          //       onChanged: (val) {
+                          //         setState(() {
+                          //           _isEnabled = val;
+                          //         });
+                          //       },
+                          //     ),
+                          //   ],
+                          // ),
 
                           // 当开关打开时显示下方内容
                           if (_isEnabled) ...[
-                            const SizedBox(height: 32),
+                            // const SizedBox(height: 32),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
