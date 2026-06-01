@@ -4,6 +4,7 @@ import 'package:sunboxcloud/pages/home/animated_flow_chart.dart';
 import 'energy_flow_overlay.dart';
 import 'customize_indicators_dialog.dart';
 import '../../utils/constants.dart';
+import '../../utils/network/api_service.dart';
 import '../../controllers/station_controller.dart';
 import '../../model/station_model.dart';
 
@@ -19,6 +20,9 @@ class _HomeTabState extends State<HomeTab> {
 
   // 电池SOC百分比
   double batterySoc = 100;
+
+  // 未读消息个数
+  int _unreadCount = 0;
 
   // 选中的指标
   List<String> selectedIndicators = [
@@ -116,7 +120,70 @@ class _HomeTabState extends State<HomeTab> {
   @override
   void initState() {
     super.initState();
+    _loadUnreadCount();
     // 数据已由 StationController 管理，此处无需手动加载
+  }
+
+  // 加载未读告警个数
+  Future<void> _loadUnreadCount() async {
+    try {
+      final result = await ApiService.getCountNumber();
+      if (result['code'] == 200 || result['code'] == 0) {
+        final data = result['data'];
+        if (data is Map) {
+          setState(() {
+            _unreadCount = data['total'] ?? 0 as int;
+          });
+        }
+      }
+    } catch (e) {
+      // 静默处理
+    }
+  }
+
+  // 构建带角标的消息图标
+  Widget _buildNotificationIcon() {
+    return GestureDetector(
+      onTap: () async {
+        await Get.toNamed('/notifications');
+        _loadUnreadCount();
+      },
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          const Icon(
+            Icons.notifications,
+            color: textColor,
+            size: 24,
+          ),
+          if (_unreadCount > 0)
+            Positioned(
+              right: -4,
+              top: -4,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                decoration: BoxDecoration(
+                  color: Colors.red,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                constraints: const BoxConstraints(
+                  minWidth: 14,
+                  minHeight: 14,
+                ),
+                child: Text(
+                  _unreadCount > 99 ? '99+' : '$_unreadCount',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 9,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
   }
 
   void _showInfoTooltip(BuildContext context) {
@@ -246,16 +313,7 @@ class _HomeTabState extends State<HomeTab> {
                         _buildStationSelector()
                       else
                         const SizedBox.shrink(),
-                      GestureDetector(
-                        onTap: () {
-                          Get.toNamed('/notifications');
-                        },
-                        child: const Icon(
-                          Icons.notifications,
-                          color: textColor,
-                          size: 24,
-                        ),
-                      ),
+                      _buildNotificationIcon(),
                     ],
                   ),
                 ),
@@ -388,16 +446,7 @@ class _HomeTabState extends State<HomeTab> {
               // 选择站点按钮
               _buildStationSelector(),
               // 消息按钮
-              GestureDetector(
-                onTap: () {
-                  Get.toNamed('/notifications');
-                },
-                child: const Icon(
-                  Icons.notifications,
-                  color: textColor,
-                  size: 24,
-                ),
-              ),
+              _buildNotificationIcon(),
             ],
           ),
         ),

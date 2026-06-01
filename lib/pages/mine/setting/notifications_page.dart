@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../utils/constants.dart';
 import '../../../utils/toast_utils.dart';
+import '../../../utils/network/api_service.dart';
 
 class NotificationsPage extends StatefulWidget {
   const NotificationsPage({super.key});
@@ -21,47 +22,14 @@ class _NotificationsPageState extends State<NotificationsPage> {
   final List<String> _sites = ['All Sites', 'Sunbox', '其他站点'];
   // 是否显示站点下拉菜单
   bool _showSiteDropdown = false;
+  // 是否加载中
+  bool _isLoading = false;
+  // 分页参数
+  int _pageNum = 1;
+  final int _pageSize = 10;
 
-  // 设备消息列表
-  final List<NotificationItem> _deviceNotifications = [
-    // NotificationItem(
-    //   id: 1,
-    //   title: 'Fan Speed Too Low',
-    //   content: 'If the issue persists, please contact the customer service.',
-    //   site: 'Sunbox',
-    //   time: 'Feb 26, 2026 05:08',
-    //   type: 'Warning',
-    //   read: false,
-    // ),
-    // NotificationItem(
-    //   id: 2,
-    //   title: 'Warning Recovery',
-    //   content:
-    //       'The warning has been resolved, and the device is now functioning normally.',
-    //   site: 'Sunbox',
-    //   time: 'Jan 28, 2026 10:15',
-    //   type: 'Recovery',
-    //   read: true,
-    // ),
-    // NotificationItem(
-    //   id: 3,
-    //   title: 'Fan Speed Too Low',
-    //   content: 'If the issue persists, please contact the customer service.',
-    //   site: 'Sunbox',
-    //   time: 'Jan 21, 2026 08:45',
-    //   type: 'Warning',
-    //   read: true,
-    // ),
-    // NotificationItem(
-    //   id: 4,
-    //   title: 'Connected',
-    //   content: 'The device is successfully connected and functioning properly.',
-    //   site: 'Sunbox',
-    //   time: 'Dec 9, 2025 07:08',
-    //   type: 'Info',
-    //   read: true,
-    // ),
-  ];
+  // 设备消息列表（从接口获取）
+  List<NotificationItem> _deviceNotifications = [];
 
   // 系统消息列表
   final List<NotificationItem> _systemNotifications = [
@@ -111,6 +79,106 @@ class _NotificationsPageState extends State<NotificationsPage> {
     //   read: true,
     // ),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAlarmData();
+  }
+
+  // 加载告警数据
+  Future<void> _loadAlarmData() async {
+    if (_selectedType != 'Device') return;
+    _pageNum = 1;
+    setState(() {
+      _isLoading = true;
+    });
+    try {
+      int? isRead;
+      if (_selectedStatus == 'Read') {
+        isRead = 1;
+      } else if (_selectedStatus == 'Unread') {
+        isRead = 0;
+      }
+      final result = await ApiService.getAlarmNewData(
+        pageNum: _pageNum,
+        pageSize: _pageSize,
+        isRead: isRead,
+      );
+      if (result['code'] == 200 || result['code'] == 0) {
+        final data = result['data'];
+        if (data is Map) {
+          final records = data['records'] as List?;
+          if (records != null) {
+            setState(() {
+              _deviceNotifications = records.map<NotificationItem>((item) {
+                final map = item as Map<String, dynamic>;
+                return NotificationItem(
+                  id: map['id'] ?? 0,
+                  title: map['alarmContent']?.toString() ?? '',
+                  content: map['alarmContent']?.toString() ?? '',
+                  site: map['deviceName']?.toString() ?? '',
+                  time: _formatTime(map['alarmTime']?.toString()),
+                  type: _mapAlarmLevel(map['alarmType']?.toString() ?? map['equipmentType']?.toString()),
+                  read: map['isRead'] != 0,
+                );
+              }).toList();
+            });
+          }
+        }
+      }
+    } catch (e) {
+      // 静默处理
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  // 格式化时间
+  String _formatTime(String? timeStr) {
+    if (timeStr == null || timeStr.isEmpty) return '';
+    try {
+      final dt = DateTime.parse(timeStr.replaceAll('/', '-'));
+      final months = [
+        '',
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec'
+      ];
+      return '${months[dt.month]} ${dt.day}, ${dt.year} ${_twoDigits(dt.hour)}:${_twoDigits(dt.minute)}';
+    } catch (e) {
+      return timeStr;
+    }
+  }
+
+  String _twoDigits(int n) {
+    return n >= 10 ? '$n' : '0$n';
+  }
+
+  // 映射告警等级到类型
+  String _mapAlarmLevel(String? level) {
+    if (level == null || level.isEmpty) return 'Info';
+    final lower = level.toLowerCase();
+    if (lower.contains('warn') || lower == '1' || lower == '2') {
+      return 'Warning';
+    } else if (lower.contains('recovery') || lower == '3') {
+      return 'Recovery';
+    } else if (lower.contains('info') || lower == '4') {
+      return 'Info';
+    }
+    return 'Info';
+  }
 
   // 清除未读消息
   void _clearUnreadMessages() {
@@ -202,6 +270,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                         _selectedType = 'Device';
                         _selectedStatus = 'All';
                       });
+                      _loadAlarmData();
                     },
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 16),
@@ -258,6 +327,9 @@ class _NotificationsPageState extends State<NotificationsPage> {
                       setState(() {
                         _selectedStatus = 'All';
                       });
+                      if (_selectedType == 'Device') {
+                        _loadAlarmData();
+                      }
                     },
                     child: Container(
                       padding: const EdgeInsets.symmetric(
@@ -287,6 +359,9 @@ class _NotificationsPageState extends State<NotificationsPage> {
                       setState(() {
                         _selectedStatus = 'Read';
                       });
+                      if (_selectedType == 'Device') {
+                        _loadAlarmData();
+                      }
                     },
                     child: Container(
                       padding: const EdgeInsets.symmetric(
@@ -316,6 +391,9 @@ class _NotificationsPageState extends State<NotificationsPage> {
                       setState(() {
                         _selectedStatus = 'Unread';
                       });
+                      if (_selectedType == 'Device') {
+                        _loadAlarmData();
+                      }
                     },
                     child: Container(
                       padding: const EdgeInsets.symmetric(
@@ -409,97 +487,119 @@ class _NotificationsPageState extends State<NotificationsPage> {
             const SizedBox(height: 1),
             // 消息列表
             Expanded(
-              child: ListView.builder(
-                itemCount: _getCurrentNotifications().length,
+              child: _isLoading &&
+                      _selectedType == 'Device' &&
+                      _deviceNotifications.isEmpty
+                  ? const Center(child: CircularProgressIndicator())
+                  : RefreshIndicator(
+                      onRefresh: _loadAlarmData,
+                      child: ListView.builder(
+                        itemCount: _getCurrentNotifications().length,
                 itemBuilder: (context, index) {
                   final notification = _getCurrentNotifications()[index];
-                  return Container(
-                    color: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 16,
-                    ),
-                    margin: const EdgeInsets.only(bottom: 1),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // 图标
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: _getNotificationColor(notification.type),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Center(
-                            child: _getNotificationIcon(notification.type),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        // 消息内容
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                notification.title,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: textColor,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                notification.content,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: textLightColor,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 8),
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    notification.site,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: textLightColor,
-                                    ),
-                                  ),
-                                  Text(
-                                    notification.time,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: textLightColor,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        // 未读标记
-                        if (!notification.read)
+                  return GestureDetector(
+                    onTap: () async {
+                      if (_selectedType == 'Device' && !notification.read) {
+                        try {
+                          await ApiService.markAlarmRead(notification.id);
+                          setState(() {
+                            notification.read = true;
+                          });
+                        } catch (e) {
+                          // 静默处理
+                        }
+                      }
+                    },
+                    behavior: HitTestBehavior.opaque,
+                    child: Container(
+                      color: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 16,
+                      ),
+                      margin: const EdgeInsets.only(bottom: 1),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // 图标
                           Container(
-                            width: 8,
-                            height: 8,
+                            width: 40,
+                            height: 40,
                             decoration: BoxDecoration(
-                              color: primaryColor,
-                              borderRadius: BorderRadius.circular(4),
+                              color: _getNotificationColor(notification.type),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Center(
+                              child: _getNotificationIcon(notification.type),
                             ),
                           ),
-                      ],
+                          const SizedBox(width: 12),
+                          // 消息内容
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  notification.title,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: textColor,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  notification.content,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: textLightColor,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 8),
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      notification.site,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: textLightColor,
+                                      ),
+                                    ),
+                                    Text(
+                                      notification.time,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: textLightColor,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          // 未读标记
+                          if (!notification.read)
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: primaryColor,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
                   );
                 },
               ),
             ),
-          ],
+          ),
+        ],
         ),
       ),
     );

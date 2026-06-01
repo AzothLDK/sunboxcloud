@@ -265,4 +265,35 @@ class ApiService {
   ) {
     return _httpManager.post('/hems/common/rpc', data: data);
   }
+
+  // 获取告警个数
+  static Future<Map<String, dynamic>> getCountNumber() {
+    return _httpManager.get('/hems/alarm/alarmDataCount');
+  }
+
+  // 标记告警已读
+  static Future<Map<String, dynamic>> markAlarmRead(int id) {
+    return _httpManager.get('/hems/alarm/read', queryParameters: {'id': id});
+  }
+
+  // 获取告警列表
+  static Future<Map<String, dynamic>> getAlarmNewData({
+    required int pageNum,
+    required int pageSize,
+    int status = 0,
+    int? isRead,
+  }) {
+    final params = <String, dynamic>{
+      'pageNum': pageNum,
+      'pageSize': pageSize,
+      'status': status,
+    };
+    if (isRead != null) {
+      params['isRead'] = isRead;
+    }
+    return _httpManager.get(
+      '/hems/alarm/alarmNewData',
+      queryParameters: params,
+    );
+  }
 }
