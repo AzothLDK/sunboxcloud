@@ -17,7 +17,7 @@ class SiteDetailTab extends StatefulWidget {
 }
 
 class _SiteDetailTabState extends State<SiteDetailTab> {
-  String _selectedMainTab = 'Daily Analysis';
+  String _selectedMainTab = 'Monthly Overview';
   String _monthlySubTab = 'Overview';
   String _dailySubTab = 'Energy';
   int? _activeLegendIndex;
@@ -45,7 +45,7 @@ class _SiteDetailTabState extends State<SiteDetailTab> {
   }
 
   Future<void> _fetchData() async {
-    if (_selectedMainTab == 'Monthly Overview') {
+    if (_selectedMainTab == 'Daily Analysis') {
       await _fetchEnergyData();
       await _fetchEnergyChartData();
     } else {
@@ -78,7 +78,7 @@ class _SiteDetailTabState extends State<SiteDetailTab> {
     final selectedStationId = stationController.selectedStationId.value;
     if (selectedStationId.isEmpty) return;
 
-    final updateTime = _selectedMainTab == 'Monthly Overview'
+    final updateTime = _selectedMainTab == 'Daily Analysis'
         ? DateFormat('yyyy-MM').format(_selectedDate)
         : DateFormat('yyyy-MM-dd').format(_selectedDate);
 
@@ -94,7 +94,7 @@ class _SiteDetailTabState extends State<SiteDetailTab> {
     final selectedStationId = stationController.selectedStationId.value;
     if (selectedStationId.isEmpty) return;
 
-    final updateTime = _selectedMainTab == 'Monthly Overview'
+    final updateTime = _selectedMainTab == 'Daily Analysis'
         ? DateFormat('yyyy-MM').format(_selectedDate)
         : DateFormat('yyyy-MM-dd').format(_selectedDate);
 
@@ -112,7 +112,7 @@ class _SiteDetailTabState extends State<SiteDetailTab> {
       builder: (context) => CustomDatePicker(
         initialDate: _selectedDate,
         maxDate: DateTime.now(),
-        mode: _selectedMainTab == 'Monthly Overview'
+        mode: _selectedMainTab == 'Daily Analysis'
             ? CustomDatePickerMode.month
             : CustomDatePickerMode.day,
         onConfirm: (date) {
@@ -127,7 +127,7 @@ class _SiteDetailTabState extends State<SiteDetailTab> {
 
   void _previousDate() {
     setState(() {
-      if (_selectedMainTab == 'Monthly Overview') {
+      if (_selectedMainTab == 'Daily Analysis') {
         _selectedDate = DateTime(
           _selectedDate.year,
           _selectedDate.month - 1,
@@ -142,7 +142,7 @@ class _SiteDetailTabState extends State<SiteDetailTab> {
 
   bool get _hasNextDate {
     final now = DateTime.now();
-    if (_selectedMainTab == 'Monthly Overview') {
+    if (_selectedMainTab == 'Daily Analysis') {
       final nextMonth = DateTime(
         _selectedDate.year,
         _selectedDate.month + 1,
@@ -158,7 +158,7 @@ class _SiteDetailTabState extends State<SiteDetailTab> {
   void _nextDate() {
     if (!_hasNextDate) return;
     setState(() {
-      if (_selectedMainTab == 'Monthly Overview') {
+      if (_selectedMainTab == 'Daily Analysis') {
         _selectedDate = DateTime(
           _selectedDate.year,
           _selectedDate.month + 1,
@@ -214,7 +214,7 @@ class _SiteDetailTabState extends State<SiteDetailTab> {
                 _buildDateSelector(),
                 const SizedBox(height: 16),
                 Expanded(
-                  child: _selectedMainTab == 'Monthly Overview'
+                  child: _selectedMainTab == 'Daily Analysis'
                       ? _buildMonthlyOverview()
                       : _buildDailyAnalysis(),
                 ),
@@ -235,46 +235,6 @@ class _SiteDetailTabState extends State<SiteDetailTab> {
       ),
       child: Row(
         children: [
-          Expanded(
-            child: GestureDetector(
-              onTap: () {
-                setState(() {
-                  _selectedMainTab = 'Daily Analysis';
-                });
-                _fetchData();
-              },
-              child: Container(
-                decoration: BoxDecoration(
-                  color: _selectedMainTab == 'Daily Analysis'
-                      ? Colors.white
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(22),
-                  boxShadow: _selectedMainTab == 'Daily Analysis'
-                      ? [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.05),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ]
-                      : null,
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  'daily_analysis'.tr,
-                  style: TextStyle(
-                    color: _selectedMainTab == 'Daily Analysis'
-                        ? primaryColor
-                        : textLightColor,
-                    fontWeight: _selectedMainTab == 'Daily Analysis'
-                        ? FontWeight.w600
-                        : FontWeight.normal,
-                  ),
-                ),
-              ),
-            ),
-          ),
-
           Expanded(
             child: GestureDetector(
               onTap: () {
@@ -301,12 +261,52 @@ class _SiteDetailTabState extends State<SiteDetailTab> {
                 ),
                 alignment: Alignment.center,
                 child: Text(
-                  'monthly_overview'.tr,
+                  'daily_analysis'.tr,
                   style: TextStyle(
                     color: _selectedMainTab == 'Monthly Overview'
                         ? primaryColor
                         : textLightColor,
                     fontWeight: _selectedMainTab == 'Monthly Overview'
+                        ? FontWeight.w600
+                        : FontWeight.normal,
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          Expanded(
+            child: GestureDetector(
+              onTap: () {
+                setState(() {
+                  _selectedMainTab = 'Daily Analysis';
+                });
+                _fetchData();
+              },
+              child: Container(
+                decoration: BoxDecoration(
+                  color: _selectedMainTab == 'Daily Analysis'
+                      ? Colors.white
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(22),
+                  boxShadow: _selectedMainTab == 'Daily Analysis'
+                      ? [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.05),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                      : null,
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  'monthly_overview'.tr,
+                  style: TextStyle(
+                    color: _selectedMainTab == 'Daily Analysis'
+                        ? primaryColor
+                        : textLightColor,
+                    fontWeight: _selectedMainTab == 'Daily Analysis'
                         ? FontWeight.w600
                         : FontWeight.normal,
                   ),
@@ -320,7 +320,7 @@ class _SiteDetailTabState extends State<SiteDetailTab> {
   }
 
   Widget _buildDateSelector() {
-    String dateText = _selectedMainTab == 'Monthly Overview'
+    String dateText = _selectedMainTab == 'Daily Analysis'
         ? _monthlyDate
         : _dailyDate;
     return Row(
