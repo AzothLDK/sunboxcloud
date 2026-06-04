@@ -7,14 +7,14 @@ class AnimatedFlowChart extends StatefulWidget {
   final double solarValue;
   final double gridValue;
   final double siteValue;
-  final double evValue;
+  final double? evValue;
 
   const AnimatedFlowChart({
     super.key,
     this.solarValue = 0,
     this.gridValue = 0,
     this.siteValue = 0,
-    this.evValue = 0,
+    this.evValue,
   });
 
   @override
@@ -75,7 +75,7 @@ class FlowChartPainter extends CustomPainter {
   final double solarValue;
   final double gridValue;
   final double siteValue;
-  final double evValue;
+  final double? evValue;
 
   FlowChartPainter({
     required this.progress,
@@ -84,7 +84,7 @@ class FlowChartPainter extends CustomPainter {
     this.solarValue = 0,
     this.gridValue = 0,
     this.siteValue = 0,
-    this.evValue = 0,
+    this.evValue,
   });
 
   double sx(double x) => x / kDesignWidth * width;
@@ -93,21 +93,22 @@ class FlowChartPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    // EV 线条
-    _drawAnimatedFlowLine(
-      canvas: canvas,
-      nodes: [
-        so(265, 250),
-        so(265, 230),
-        so(150, 208),
-        so(150, 240),
-        so(160, 240),
-      ],
-      thickness: sy(6),
-      baseColor: Colors.blue.withValues(alpha: 0.2),
-      flowColor: Colors.lightBlue,
-      isFlowing: evValue > 0,
-    );
+    if (evValue != null) {
+      _drawAnimatedFlowLine(
+        canvas: canvas,
+        nodes: [
+          so(265, 250),
+          so(265, 230),
+          so(150, 208),
+          so(150, 240),
+          so(160, 240),
+        ],
+        thickness: sy(6),
+        baseColor: Colors.blue.withValues(alpha: 0.2),
+        flowColor: Colors.lightBlue,
+        isFlowing: evValue! > 0,
+      );
+    }
 
     // Site 线条
     _drawAnimatedFlowLine(

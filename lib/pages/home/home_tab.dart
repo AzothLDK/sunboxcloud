@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:sunboxcloud/pages/home/animated_flow_chart.dart';
+import 'animated_flow_chart.dart';
 import 'energy_flow_overlay.dart';
 import 'customize_indicators_dialog.dart';
 import '../../utils/constants.dart';
@@ -151,11 +151,7 @@ class _HomeTabState extends State<HomeTab> {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          const Icon(
-            Icons.notifications,
-            color: textColor,
-            size: 24,
-          ),
+          const Icon(Icons.notifications, color: textColor, size: 24),
           if (_unreadCount > 0)
             Positioned(
               right: -4,
@@ -166,10 +162,7 @@ class _HomeTabState extends State<HomeTab> {
                   color: Colors.red,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                constraints: const BoxConstraints(
-                  minWidth: 14,
-                  minHeight: 14,
-                ),
+                constraints: const BoxConstraints(minWidth: 14, minHeight: 14),
                 child: Text(
                   _unreadCount > 99 ? '99+' : '$_unreadCount',
                   style: const TextStyle(
@@ -463,7 +456,7 @@ class _HomeTabState extends State<HomeTab> {
                   solarValue: data?.solar ?? 0,
                   gridValue: data?.grid ?? 0,
                   siteValue: data?.site ?? 0,
-                  evValue: data?.ev ?? 0, // 目前 homeData 中似乎没有 ev 字段，先传 0
+                  evValue: data?.ev,
                 ),
                 const EnergyFlowOverlay(),
               ],

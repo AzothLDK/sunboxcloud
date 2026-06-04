@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:sunboxcloud/utils/network/api_service.dart';
 import 'package:sunboxcloud/utils/network/crypto_util.dart';
-import '../utils/constants.dart';
-import '../utils/toast_utils.dart';
+import '../../utils/constants.dart';
+import '../../utils/toast_utils.dart';
 
 class GoogleRegisterPage extends StatefulWidget {
   final String email;

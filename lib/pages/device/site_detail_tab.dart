@@ -7,7 +7,9 @@ import 'package:intl/intl.dart';
 import '../../controllers/station_controller.dart';
 import '../../utils/constants.dart';
 import '../../utils/storage.dart';
+import '../../utils/network/api_service.dart';
 import '../../widgets/custom_date_picker.dart';
+import '../../widgets/custom_sankey_chart.dart';
 
 class SiteDetailTab extends StatefulWidget {
   const SiteDetailTab({super.key});
@@ -23,6 +25,10 @@ class _SiteDetailTabState extends State<SiteDetailTab> {
   int? _activeLegendIndex;
 
   DateTime _selectedDate = DateTime.now();
+
+  List<SankeyNode> _energyFlowNodes = [];
+  List<SankeyLink> _energyFlowLinks = [];
+  bool _isEnergyFlowLoading = false;
 
   String get _monthlyDate =>
       DateFormat('MMM yyyy', Get.locale?.toString()).format(_selectedDate);
@@ -65,6 +71,7 @@ class _SiteDetailTabState extends State<SiteDetailTab> {
         stationId: selectedStationId,
         updateTime: updateTime,
       );
+      await _fetchEnergyFlowData();
     } else {
       await stationController.fetchPowerDayData(
         stationId: selectedStationId,
@@ -102,6 +109,70 @@ class _SiteDetailTabState extends State<SiteDetailTab> {
       stationId: selectedStationId,
       updateTime: updateTime,
     );
+  }
+
+  Future<void> _fetchEnergyFlowData() async {
+    final stationController = Get.find<StationController>();
+    final selectedStationId = stationController.selectedStationId.value;
+    if (selectedStationId.isEmpty) return;
+
+    final updateTime = DateFormat('yyyy-MM-dd').format(_selectedDate);
+
+    setState(() {
+      _isEnergyFlowLoading = true;
+    });
+
+    try {
+      final response = await ApiService.getEnergyFlow(
+        stationId: selectedStationId,
+        updateTime: updateTime,
+      );
+
+      if (response['code'] == 200 && response['data'] != null) {
+        final data = response['data'];
+        final nodesData = data['nodes'] as List?;
+        final linksData = data['links'] as List?;
+
+        if (nodesData != null && linksData != null) {
+          final nodes = nodesData.map((node) {
+            final name = node['name'] as String;
+            final colorHex = node['itemStyle']['color'] as String;
+            final depth = node['depth'] as int;
+
+            Color color;
+            try {
+              color = Color(int.parse(colorHex.replaceAll('#', '0xFF')));
+            } catch (e) {
+              color = Colors.grey;
+            }
+
+            return SankeyNode(name: name, color: color, depth: depth);
+          }).toList();
+
+          final links = linksData.map((link) {
+            return SankeyLink(
+              sourceName: link['source'] as String,
+              targetName: link['target'] as String,
+              value: (link['value'] as num).toDouble(),
+            );
+          }).toList();
+
+          setState(() {
+            _energyFlowNodes = nodes;
+            _energyFlowLinks = links;
+            _isEnergyFlowLoading = false;
+          });
+        }
+      } else {
+        setState(() {
+          _isEnergyFlowLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _isEnergyFlowLoading = false;
+      });
+    }
   }
 
   Future<void> _selectDate() async {
@@ -1132,7 +1203,7 @@ class _SiteDetailTabState extends State<SiteDetailTab> {
       return ListView(
         children: [
           Container(
-            padding: const EdgeInsets.all(15),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
@@ -1218,7 +1289,7 @@ class _SiteDetailTabState extends State<SiteDetailTab> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 10),
 
                 if (_dailySubTab == 'Energy') ...[
                   Text(
@@ -1229,21 +1300,49 @@ class _SiteDetailTabState extends State<SiteDetailTab> {
                       color: textColor,
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  if (isEnergyLoading)
+                  const SizedBox(height: 10),
+                  if (_isEnergyFlowLoading)
                     const SizedBox(
-                      height: 210,
+                      height: 300,
                       child: Center(child: CircularProgressIndicator()),
                     )
+                  else if (_energyFlowNodes.isNotEmpty &&
+                      _energyFlowLinks.isNotEmpty)
+                    SizedBox(
+                      height: 300,
+                      child: CustomSankeyChart(
+                        nodes: _energyFlowNodes,
+                        links: _energyFlowLinks,
+                        nodeWidth: 45,
+                        nodeGap: 10,
+                        minHeight: 50,
+                        borderRadius: 6,
+                      ),
+                    )
                   else
-                    _buildEnergyFlowTree(
-                      gridPercent: gridPercent,
-                      batteryPercent: batteryPercent,
-                      solarPercent: solarPercent,
-                      gridValue: gridValue,
-                      batteryValue: batteryValue,
-                      solarValue: solarValue,
+                    const SizedBox(
+                      height: 300,
+                      child: Center(
+                        child: Text(
+                          'No energy flow data available',
+                          style: TextStyle(color: textLightColor, fontSize: 14),
+                        ),
+                      ),
                     ),
+                  // if (isEnergyLoading)
+                  //   const SizedBox(
+                  //     height: 210,
+                  //     child: Center(child: CircularProgressIndicator()),
+                  //   )
+                  // else
+                  //   _buildEnergyFlowTree(
+                  //     gridPercent: gridPercent,
+                  //     batteryPercent: batteryPercent,
+                  //     solarPercent: solarPercent,
+                  //     gridValue: gridValue,
+                  //     batteryValue: batteryValue,
+                  //     solarValue: solarValue,
+                  //   ),
                   const SizedBox(height: 15),
                   // Row(
                   //   children: [

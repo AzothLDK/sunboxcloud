@@ -1,9 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../utils/constants.dart';
-import '../../utils/toast_utils.dart';
 import '../../controllers/station_controller.dart';
 import '../../model/device_model.dart';
 import 'sunbox_detail_page.dart';
@@ -184,11 +182,11 @@ class _DeviceListPageState extends State<DeviceListPage> {
       power: 7.2,
     );
 
-    // 检查是否已经存在 SunCharger，如果不存在则添加
-    bool hasCharger = displayDevices.any((d) => d.deviceType == 'SunCharger');
-    if (!hasCharger) {
-      displayDevices.insert(0, simulatedCharger);
-    }
+    // // 检查是否已经存在 SunCharger，如果不存在则添加
+    // bool hasCharger = displayDevices.any((d) => d.deviceType == 'SunCharger');
+    // if (!hasCharger) {
+    //   displayDevices.insert(0, simulatedCharger);
+    // }
 
     if (displayDevices.isEmpty) {
       return ListView(

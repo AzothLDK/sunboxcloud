@@ -260,10 +260,8 @@ class ApiService {
     );
   }
 
-  static Future<Map<String, dynamic>> rpcControl(
-    Map<String, dynamic> data,
-  ) {
-    return _httpManager.post('/hems/common/rpc', data: data);
+  static Future<Map<String, dynamic>> rpcControl(Map<String, dynamic> data) {
+    return _httpManager.get('/hems/common/rpc', queryParameters: data);
   }
 
   // 获取告警个数
@@ -294,6 +292,16 @@ class ApiService {
     return _httpManager.get(
       '/hems/alarm/alarmNewData',
       queryParameters: params,
+    );
+  }
+
+  static Future<Map<String, dynamic>> getEnergyFlow({
+    required String stationId,
+    required String updateTime,
+  }) {
+    return _httpManager.get(
+      '/hems/app/device/flow',
+      queryParameters: {'stationId': stationId, 'updateTime': updateTime},
     );
   }
 }

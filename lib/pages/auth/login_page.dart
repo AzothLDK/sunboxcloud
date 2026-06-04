@@ -1,10 +1,10 @@
 import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../controllers/auth_controller.dart';
-import '../utils/constants.dart';
-import '../routes/app_routes.dart';
-import 'mine/setting/reset_password_page.dart';
+import '../../controllers/auth_controller.dart';
+import '../../utils/constants.dart';
+import '../../routes/app_routes.dart';
+import '../mine/setting/reset_password_page.dart';
 
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
@@ -135,7 +135,7 @@ class LoginPage extends StatelessWidget {
                 alignment: Alignment.centerRight,
                 child: TextButton(
                   onPressed: () {
-                    Get.to(const ResetPasswordPage());
+                    Get.to(() => const ResetPasswordPage());
                   },
                   child: Text(
                     'forgot_password'.tr,

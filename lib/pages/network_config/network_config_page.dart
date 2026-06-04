@@ -32,15 +32,15 @@ class _LinkingState {
 }
 
 /// Page for configuring the distribution network via Smart BLE Link.
-class DistributionNetworkPage extends StatefulWidget {
-  const DistributionNetworkPage({super.key});
+class NetworkConfigPage extends StatefulWidget {
+  const NetworkConfigPage({super.key});
 
   @override
-  State<DistributionNetworkPage> createState() =>
-      _DistributionNetworkPageState();
+  State<NetworkConfigPage> createState() =>
+      _NetworkConfigPageState();
 }
 
-class _DistributionNetworkPageState extends State<DistributionNetworkPage> {
+class _NetworkConfigPageState extends State<NetworkConfigPage> {
   final TextEditingController _ssidController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _bleNameController = TextEditingController();

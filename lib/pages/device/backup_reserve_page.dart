@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../utils/constants.dart';
 import '../../utils/network/api_service.dart';
-import '../../utils/toast_utils.dart';
+import '../../widgets/custom_status_dialog.dart';
 import 'dart:developer' as developer;
 
 class BackupReservePage extends StatefulWidget {
@@ -35,9 +35,58 @@ class _BackupReservePageState extends State<BackupReservePage> {
 
   Future<void> _submitSettings() async {
     if (widget.deviceCode.isEmpty) {
-      ToastUtils.error('device_code_empty'.tr);
+      CustomStatusDialog.show(
+        type: CustomDialogType.error,
+        message: 'device_code_empty'.tr,
+      );
       return;
     }
+
+    final confirmed = await Get.dialog<bool>(
+      AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'confirm_settings'.tr,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: textColor,
+          ),
+        ),
+        content: Text(
+          'settings_effective_after_one_minute'.tr,
+          style: const TextStyle(
+            fontSize: 14,
+            color: textLightColor,
+            height: 1.5,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            child: Text(
+              'cancel'.tr,
+              style: const TextStyle(color: textLightColor, fontSize: 16),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Get.back(result: true),
+            child: Text(
+              'confirm'.tr,
+              style: const TextStyle(
+                color: primaryColor,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
     try {
       Get.dialog(
         const Center(child: CircularProgressIndicator()),
@@ -56,10 +105,18 @@ class _BackupReservePageState extends State<BackupReservePage> {
       Get.back();
 
       if (response['code'] == 200) {
-        ToastUtils.success('settings_saved_success'.tr);
-        Get.back(result: true);
+        CustomStatusDialog.show(
+          type: CustomDialogType.success,
+          message: 'settings_saved_success'.tr,
+          onConfirm: () {
+            Get.back(result: true);
+          },
+        );
       } else {
-        ToastUtils.error(response['msg'] ?? 'settings_saved_failed'.tr);
+        CustomStatusDialog.show(
+          type: CustomDialogType.error,
+          message: response['msg'] ?? 'settings_saved_failed'.tr,
+        );
       }
     } catch (e) {
       Get.back();
@@ -68,7 +125,10 @@ class _BackupReservePageState extends State<BackupReservePage> {
         name: 'BackupReservePage',
         error: e,
       );
-      ToastUtils.error('network_error'.tr);
+      CustomStatusDialog.show(
+        type: CustomDialogType.error,
+        message: 'network_error'.tr,
+      );
     }
   }
 

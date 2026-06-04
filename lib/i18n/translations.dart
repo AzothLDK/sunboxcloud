@@ -1,6 +1,6 @@
 import 'package:get/get.dart';
 
-class Messages extends Translations {
+class AppTranslations extends Translations {
   @override
   Map<String, Map<String, String>> get keys => {
     'en_US': {
@@ -75,6 +75,9 @@ class Messages extends Translations {
       'battery_soc': 'Battery SoC',
       'customize_indicators': 'Customize Indicators',
       'confirm': 'Confirm',
+      'confirm_settings': 'Confirm Settings',
+      'settings_effective_after_one_minute':
+          'Settings will be effective after 1 minute. Do you want to continue?',
       'solar_generation': 'Solar Generation',
       'site_load': 'Load',
       'battery_charging': 'Battery Charging',
@@ -512,6 +515,8 @@ class Messages extends Translations {
       'battery_soc': '电池 SOC',
       'customize_indicators': '自定义显示指标',
       'confirm': '确认',
+      'confirm_settings': '确认设置',
+      'settings_effective_after_one_minute': '设置将在1分钟后生效，是否继续？',
       'solar_generation': '光伏发电量',
       'site_load': '负载',
       'battery_charging': '储能充电',

@@ -11,6 +11,7 @@ import 'package:sunboxcloud/utils/toast_utils.dart';
 import '../../controllers/station_controller.dart';
 import '../../routes/app_routes.dart';
 import '../../widgets/custom_status_dialog.dart';
+import 'network_config_page.dart';
 
 class AddDevicePage extends StatefulWidget {
   const AddDevicePage({super.key});
@@ -370,8 +371,8 @@ class _AddDevicePageState extends State<AddDevicePage>
                             subtitle: Text('RSSI: ${result.rssi} dBm'),
                             trailing: ElevatedButton(
                               onPressed: () {
-                                Get.toNamed(
-                                  AppRoutes.distributionNetwork,
+                                Get.to(
+                                  () => const NetworkConfigPage(),
                                   arguments: {
                                     'stationId': _stationId,
                                     'stationName': _stationName,

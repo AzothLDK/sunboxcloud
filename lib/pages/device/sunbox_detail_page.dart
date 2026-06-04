@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:flutter_echarts/flutter_echarts.dart';
-import 'full_screen_chart_page.dart';
-import '../../utils/constants.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
+import 'full_screen_chart_page.dart';
 import 'backup_reserve_page.dart';
+import '../../utils/constants.dart';
 import '../../controllers/station_controller.dart';
 import '../../widgets/custom_date_picker.dart';
-import 'package:intl/intl.dart';
 
 class SunBoxDetailPage extends StatefulWidget {
   final String? deviceName;

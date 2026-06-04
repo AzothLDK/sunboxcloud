@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:sunboxcloud/utils/constants.dart' as LanguageManager;
 import '../../../controllers/auth_controller.dart';
 import '../../../utils/constants.dart';
+import '../../../utils/constants.dart' as LanguageManager;
 
 class LanguagePage extends StatelessWidget {
   const LanguagePage({super.key});

@@ -3,12 +3,12 @@ import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart' hide FormData;
+import 'package:dio/dio.dart';
 import '../../../utils/constants.dart';
 import '../../../utils/storage.dart';
 import '../../../utils/network/api_service.dart';
 import '../../../utils/toast_utils.dart';
 import '../../../controllers/auth_controller.dart';
-import 'package:dio/dio.dart';
 
 enum EditFieldType { username, address, phone }
 

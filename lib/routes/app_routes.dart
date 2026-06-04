@@ -1,8 +1,8 @@
 import 'package:get/get.dart';
-import '../pages/login_page.dart';
-import '../pages/register_page.dart';
-import '../pages/register_success_page.dart';
-import '../pages/google_register_page.dart';
+import '../pages/auth/login_page.dart';
+import '../pages/auth/register_page.dart';
+import '../pages/auth/register_success_page.dart';
+import '../pages/auth/google_register_page.dart';
 import '../pages/mine/complete_profile_page.dart';
 import '../pages/mine/setting/language_page.dart';
 import '../pages/home/home_page.dart';
@@ -19,9 +19,9 @@ import '../pages/mine/setting/reset_password_page.dart';
 import '../pages/mine/setting/change_email_page.dart';
 import '../pages/mine/setting/edit_field_page.dart';
 import '../pages/mine/setting/notifications_page.dart';
-import '../pages/distributionNetwork/distributionNetwork_page.dart';
-import '../pages/distributionNetwork/add_device_page.dart';
-import '../pages/distributionNetwork/scan_page.dart';
+import '../pages/network_config/network_config_page.dart';
+import '../pages/network_config/add_device_page.dart';
+import '../pages/network_config/scan_page.dart';
 import '../pages/mine/device_detail_page.dart';
 
 import '../pages/mine/my_site_page.dart';
@@ -76,12 +76,12 @@ class AppRoutes {
     ),
     GetPage(
       name: googleRegister,
-      page: () => GoogleRegisterPage(email: Get.arguments['email']),
+      page: () => GoogleRegisterPage(email: Get.arguments?['email'] ?? ''),
       transition: Transition.fade,
     ),
     GetPage(
       name: completeProfile,
-      page: () => CompleteProfilePage(email: Get.arguments['email']),
+      page: () => CompleteProfilePage(email: Get.arguments?['email'] ?? ''),
       transition: Transition.fade,
     ),
     GetPage(
@@ -152,17 +152,17 @@ class AppRoutes {
     GetPage(
       name: bleConfig,
       page: () => const AddDevicePage(),
-      transition: Transition.fade,
+      transition: Transition.rightToLeft,
     ),
     GetPage(
       name: distributionNetwork,
-      page: () => const DistributionNetworkPage(),
-      transition: Transition.fade,
+      page: () => const NetworkConfigPage(),
+      transition: Transition.rightToLeft,
     ),
     GetPage(
       name: scan,
       page: () => const ScanPage(),
-      transition: Transition.fade,
+      transition: Transition.rightToLeft,
     ),
     GetPage(
       name: changeEmail,

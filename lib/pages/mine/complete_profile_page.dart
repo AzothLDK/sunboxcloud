@@ -7,10 +7,10 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:sunboxcloud/utils/network/api_service.dart';
-import '../../../controllers/auth_controller.dart';
-import '../../../utils/constants.dart';
-import '../../../utils/storage.dart';
-import '../../../utils/toast_utils.dart';
+import '../../controllers/auth_controller.dart';
+import '../../utils/constants.dart';
+import '../../utils/storage.dart';
+import '../../utils/toast_utils.dart';
 
 class CompleteProfilePage extends StatefulWidget {
   final String email;

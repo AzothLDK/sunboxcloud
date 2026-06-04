@@ -25,11 +25,13 @@ Future<String> _getTimezone() async {
   }
 }
 
-// const String host = "http://192.168.1.181:30742/";
+// const String host = "http://192.168.1.181:30742/"; //开发
 
 // const String host = "http://192.168.20.182:8001/";
 
-const String host = "http://58.214.25.130:10880/";
+const String host = "http://192.168.1.181:31376"; //测试
+
+// const String host = "http://58.214.25.130:10880/";
 
 class HttpManager {
   // 单例模式

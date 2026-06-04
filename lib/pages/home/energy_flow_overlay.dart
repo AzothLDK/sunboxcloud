@@ -27,7 +27,11 @@ class EnergyFlowOverlay extends StatelessWidget {
             width: width,
             height: height,
             child: CustomPaint(
-              painter: EnergyFlowPainter(width: width, height: height),
+              painter: EnergyFlowPainter(
+                width: width,
+                height: height,
+                evValue: data?.ev,
+              ),
               child: Stack(
                 clipBehavior: Clip.none,
                 children: [
@@ -92,18 +96,19 @@ class EnergyFlowOverlay extends StatelessWidget {
                       ),
                     ),
                   ),
-                  Positioned(
-                    bottom: sy(0),
-                    left: sx(160),
-                    child: Container(
-                      padding: EdgeInsets.all(sy(8)),
-                      child: Text(
-                        'ev_charger'.tr + '\n-- kW',
-                        style: TextStyle(fontSize: sy(14), color: textColor),
-                        textAlign: TextAlign.left,
+                  if (data?.ev != null)
+                    Positioned(
+                      bottom: sy(0),
+                      left: sx(160),
+                      child: Container(
+                        padding: EdgeInsets.all(sy(8)),
+                        child: Text(
+                          'ev_charger'.tr + '\n${data?.ev ?? '--'} kW',
+                          style: TextStyle(fontSize: sy(14), color: textColor),
+                          textAlign: TextAlign.left,
+                        ),
                       ),
                     ),
-                  ),
                   Positioned(
                     bottom: sy(0),
                     right: sx(80),
@@ -129,8 +134,9 @@ class EnergyFlowOverlay extends StatelessWidget {
 class EnergyFlowPainter extends CustomPainter {
   final double width;
   final double height;
+  final double? evValue;
 
-  EnergyFlowPainter({required this.width, required this.height});
+  EnergyFlowPainter({required this.width, required this.height, this.evValue});
 
   double sx(double x) => x / kDesignWidth * width;
   double sy(double y) => y / kDesignHeight * height;
@@ -174,14 +180,16 @@ class EnergyFlowPainter extends CustomPainter {
       sx(dashSpace),
     );
 
-    _drawDashedLine(
-      canvas,
-      paint,
-      so(160, 240),
-      so(160, 320),
-      sx(dashWidth),
-      sx(dashSpace),
-    );
+    if (evValue != null) {
+      _drawDashedLine(
+        canvas,
+        paint,
+        so(160, 240),
+        so(160, 320),
+        sx(dashWidth),
+        sx(dashSpace),
+      );
+    }
   }
 
   void _drawDashedLine(
@@ -223,6 +231,8 @@ class EnergyFlowPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant EnergyFlowPainter oldDelegate) {
-    return oldDelegate.width != width || oldDelegate.height != height;
+    return oldDelegate.width != width ||
+        oldDelegate.height != height ||
+        oldDelegate.evValue != evValue;
   }
 }

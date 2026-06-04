@@ -9,14 +9,8 @@ import '../../widgets/custom_confirm_dialog.dart';
 import '../../routes/app_routes.dart';
 import 'address_edit_page.dart';
 
-class SitePage extends StatefulWidget {
+class SitePage extends StatelessWidget {
   const SitePage({super.key});
-
-  @override
-  State<SitePage> createState() => _SitePageState();
-}
-
-class _SitePageState extends State<SitePage> {
   @override
   Widget build(BuildContext context) {
     final StationController controller = Get.find<StationController>();

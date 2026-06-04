@@ -4,10 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:sunboxcloud/utils/network/crypto_util.dart';
-import '../utils/constants.dart';
-import '../utils/network/api_service.dart';
-import '../routes/app_routes.dart';
-import '../utils/toast_utils.dart';
+import '../../utils/constants.dart';
+import '../../utils/network/api_service.dart';
+import '../../routes/app_routes.dart';
+import '../../utils/toast_utils.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});

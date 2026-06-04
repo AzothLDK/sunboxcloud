@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../utils/constants.dart';
-import '../routes/app_routes.dart';
-import '../controllers/auth_controller.dart';
-import '../utils/toast_utils.dart';
+import '../../utils/constants.dart';
+import '../../routes/app_routes.dart';
+import '../../controllers/auth_controller.dart';
+import '../../utils/toast_utils.dart';
 
 class RegisterSuccessPage extends StatefulWidget {
   const RegisterSuccessPage({super.key});

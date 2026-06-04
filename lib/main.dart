@@ -4,7 +4,7 @@ import 'package:get/get.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'routes/app_routes.dart';
 import 'utils/constants.dart';
-import 'langs/messages.dart';
+import 'i18n/translations.dart';
 import 'controllers/auth_controller.dart';
 import 'utils/storage.dart';
 
@@ -76,7 +76,7 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ),
-      translations: Messages(),
+      translations: AppTranslations(),
       locale: _getSavedLocale(),
       fallbackLocale: const Locale('zh', 'CN'),
       localizationsDelegates: const [
