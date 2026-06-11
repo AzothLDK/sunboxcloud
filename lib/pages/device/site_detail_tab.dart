@@ -1313,7 +1313,7 @@ class _SiteDetailTabState extends State<SiteDetailTab> {
                       child: CustomSankeyChart(
                         nodes: _energyFlowNodes,
                         links: _energyFlowLinks,
-                        nodeWidth: 45,
+                        nodeWidth: Get.locale?.languageCode == 'en' ? 55 : 45,
                         nodeGap: 10,
                         minHeight: 50,
                         borderRadius: 6,

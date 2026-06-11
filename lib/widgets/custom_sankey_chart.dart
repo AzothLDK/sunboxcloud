@@ -174,8 +174,9 @@ class CustomSankeyChartState extends State<CustomSankeyChart> {
         _totalValue != null) {
       for (var link in _selectedLinks!) {
         String key = '${link.sourceName}|${link.targetName}';
-        double percent =
-            _totalValue! > 0 ? (link.value / _totalValue! * 100) : 0;
+        double percent = _totalValue! > 0
+            ? (link.value / _totalValue! * 100)
+            : 0;
         linkPercentages[key] = percent;
       }
     }
@@ -301,8 +302,11 @@ class CustomSankeyChartState extends State<CustomSankeyChart> {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.arrow_downward,
-                        size: 12, color: Color(0xFF10B981)),
+                    const Icon(
+                      Icons.arrow_downward,
+                      size: 12,
+                      color: Color(0xFF10B981),
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       link.value.toStringAsFixed(2),
@@ -350,10 +354,7 @@ class CustomSankeyChartState extends State<CustomSankeyChart> {
     return Positioned(
       left: tooltipLeft,
       top: tooltipTop,
-      child: Material(
-        color: Colors.transparent,
-        child: tooltipContent,
-      ),
+      child: Material(color: Colors.transparent, child: tooltipContent),
     );
   }
 
@@ -383,7 +384,7 @@ class _SankeyPainter extends CustomPainter {
   final Set<String>? selectedLinks;
   final Map<String, double> linkPercentages;
   final void Function(List<_LinkGeometry>, List<_NodeGeometry>)
-      onGeometriesComputed;
+  onGeometriesComputed;
 
   _SankeyPainter({
     required this.nodes,
@@ -423,10 +424,12 @@ class _SankeyPainter extends CustomPainter {
 
   List<_NodeGeometry> _buildNodeGeometries() {
     return nodes
-        .map((node) => _NodeGeometry(
-              rect: Rect.fromLTWH(node.x, node.y, nodeWidth, node.height),
-              node: node,
-            ))
+        .map(
+          (node) => _NodeGeometry(
+            rect: Rect.fromLTWH(node.x, node.y, nodeWidth, node.height),
+            node: node,
+          ),
+        )
         .toList();
   }
 
@@ -452,7 +455,11 @@ class _SankeyPainter extends CustomPainter {
 
     _positionNodes(leftNodes, 0, chartHeight, leftTotalValue);
     _positionNodes(
-        rightNodes, chartWidth - nodeWidth, chartHeight, rightTotalValue);
+      rightNodes,
+      chartWidth - nodeWidth,
+      chartHeight,
+      rightTotalValue,
+    );
   }
 
   void _positionNodes(
@@ -559,8 +566,9 @@ class _SankeyPainter extends CustomPainter {
 
       canvas.drawRRect(rect, paint);
 
-      double nodeValue =
-          node.depth == 0 ? _getOutValue(node.name) : _getInValue(node.name);
+      double nodeValue = node.depth == 0
+          ? _getOutValue(node.name)
+          : _getInValue(node.name);
 
       double sideTotal = node.depth == 0 ? leftTotal : rightTotal;
       double percentage = sideTotal > 0 ? (nodeValue / sideTotal * 100) : 0;
@@ -616,9 +624,12 @@ class _SankeyPainter extends CustomPainter {
 
         namePainter.paint(canvas, Offset(node.x + 5, nameY));
         percentPainter.paint(
-            canvas,
-            Offset(node.x + (nodeWidth - percentPainter.width) / 2,
-                node.y + node.height - percentPainter.height - 3));
+          canvas,
+          Offset(
+            node.x + (nodeWidth - percentPainter.width) / 2,
+            node.y + node.height - percentPainter.height - 3,
+          ),
+        );
       } else {
         double textY = node.y + 5;
         if (node.height > namePainter.height + 10) {
@@ -655,8 +666,9 @@ class _SankeyPainter extends CustomPainter {
         int outCount = links
             .where((l) => l.sourceName == sourceNode.name && l.value > 0)
             .length;
-        sourceLinkHeight =
-            outCount > 0 ? sourceNode.height / outCount : minHeight;
+        sourceLinkHeight = outCount > 0
+            ? sourceNode.height / outCount
+            : minHeight;
       }
 
       double targetLinkHeight;
@@ -666,8 +678,9 @@ class _SankeyPainter extends CustomPainter {
         int inCount = links
             .where((l) => l.targetName == targetNode.name && l.value > 0)
             .length;
-        targetLinkHeight =
-            inCount > 0 ? targetNode.height / inCount : minHeight;
+        targetLinkHeight = inCount > 0
+            ? targetNode.height / inCount
+            : minHeight;
       }
 
       double sourceOffset = sourceOffsets[link.sourceName] ?? 0;
@@ -688,12 +701,14 @@ class _SankeyPainter extends CustomPainter {
         targetLinkHeight,
       );
 
-      geometries.add(_LinkGeometry(
-        path: path,
-        link: link,
-        sourceColor: sourceNode.color,
-        targetColor: targetNode.color,
-      ));
+      geometries.add(
+        _LinkGeometry(
+          path: path,
+          link: link,
+          sourceColor: sourceNode.color,
+          targetColor: targetNode.color,
+        ),
+      );
 
       sourceOffsets[link.sourceName] = sourceOffset + sourceLinkHeight;
       targetOffsets[link.targetName] = targetOffset + targetLinkHeight;
@@ -712,14 +727,7 @@ class _SankeyPainter extends CustomPainter {
   ) {
     final path = Path();
     path.moveTo(x1, y1);
-    path.cubicTo(
-      x1 + (x2 - x1) / 2,
-      y1,
-      x2 - (x2 - x1) / 2,
-      y2,
-      x2,
-      y2,
-    );
+    path.cubicTo(x1 + (x2 - x1) / 2, y1, x2 - (x2 - x1) / 2, y2, x2, y2);
     path.lineTo(x2, y2 + targetLinkHeight);
     path.cubicTo(
       x2 - (x2 - x1) / 2,
@@ -792,11 +800,7 @@ class _SankeyPainter extends CustomPainter {
         fontSize: 12,
         fontWeight: FontWeight.bold,
         shadows: [
-          Shadow(
-            blurRadius: 4,
-            color: Colors.black54,
-            offset: Offset(1, 1),
-          ),
+          Shadow(blurRadius: 4, color: Colors.black54, offset: Offset(1, 1)),
         ],
       ),
     );

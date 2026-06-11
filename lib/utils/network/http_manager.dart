@@ -1,5 +1,4 @@
 import 'dart:developer' as developer;
-
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
@@ -25,13 +24,26 @@ Future<String> _getTimezone() async {
   }
 }
 
+// 后面对接接口的时候不用直连开发环境的SunOS地址，和对接谁就用谁的地址
+
+// 李陆辉：http://192.168.20.222:44201
+// 赵永亮：http://192.168.20.222:44202
+// 李坤如：http://192.168.20.222:44203
+// 周家辉：http://192.168.20.222:44204
+// 李国桥：http://192.168.20.222:44205
+
+// 后端接口有没有启动就看
+// http://192.168.20.222:3001/status/sunbox-server
+
+const String host = "http://192.168.20.222:44201/"; //测试
+
 // const String host = "http://192.168.1.181:30742/"; //开发
 
 // const String host = "http://192.168.20.182:8001/";
 
-const String host = "http://192.168.1.181:31376"; //测试
+// const String host = "http://192.168.1.181:31376";  //测试
 
-// const String host = "http://58.214.25.130:10880/";
+// const String host = "http://58.214.25.130:10880/"; //外网映射
 
 class HttpManager {
   // 单例模式

@@ -182,11 +182,11 @@ class _DeviceListPageState extends State<DeviceListPage> {
       power: 7.2,
     );
 
-    // // 检查是否已经存在 SunCharger，如果不存在则添加
-    // bool hasCharger = displayDevices.any((d) => d.deviceType == 'SunCharger');
-    // if (!hasCharger) {
-    //   displayDevices.insert(0, simulatedCharger);
-    // }
+    // 检查是否已经存在 SunCharger，如果不存在则添加
+    bool hasCharger = displayDevices.any((d) => d.deviceType == 'SunCharger');
+    if (!hasCharger) {
+      displayDevices.insert(0, simulatedCharger);
+    }
 
     if (displayDevices.isEmpty) {
       return ListView(
@@ -413,7 +413,8 @@ class _DeviceListPageState extends State<DeviceListPage> {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       if (isSunCharger)
-                        _buildBatteryIndicator(soc)
+                        // _buildBatteryIndicator(soc)
+                        const SizedBox.shrink()
                       else
                         _buildCircularIndicator(soc),
                       const SizedBox(width: 24),

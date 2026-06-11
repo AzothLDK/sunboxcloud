@@ -16,7 +16,7 @@ class ApiService {
 
   // 获取新版本号接口
   static Future<Map<String, dynamic>> getNewVersion() {
-    return _httpManager.get('/hems/version/newOne');
+    return _httpManager.get('/sunbox/version/newOne');
   }
 
   // 发送邮箱验证码接口
@@ -60,14 +60,14 @@ class ApiService {
 
   // 获取站点列表接口
   static Future<Map<String, dynamic>> getStationList() {
-    return _httpManager.get('/hems/basic/station/getList');
+    return _httpManager.get('/sunbox/basic/station/getList');
   }
 
   // 保存或编辑站点接口
   static Future<Map<String, dynamic>> saveOrEditStation(
     Map<String, dynamic> data,
   ) {
-    return _httpManager.post('/hems/basic/station/saveOrEdit', data: data);
+    return _httpManager.post('/sunbox/basic/station/saveOrEdit', data: data);
   }
 
   // 获取设备列表接口
@@ -76,7 +76,7 @@ class ApiService {
     String deviceType,
   ) {
     return _httpManager.get(
-      '/hems/basic/device/getList',
+      '/sunbox/basic/device/getList',
       queryParameters: {
         'stationId': stationId,
         'deviceTypes': deviceType,
@@ -88,35 +88,38 @@ class ApiService {
   // 获取 App 设备列表接口 (新)
   static Future<Map<String, dynamic>> getAppDeviceList(String stationId) {
     return _httpManager.get(
-      '/hems/app/device/getList',
+      '/sunbox/app/device/getList',
       queryParameters: {'stationId': stationId},
     );
   }
 
   // 删除设备接口
   static Future<Map<String, dynamic>> removeDevice(String id) {
-    return _httpManager.delete('/hems/basic/device/remove/$id');
+    return _httpManager.delete('/sunbox/basic/device/remove/$id');
   }
 
   // 删除站点接口
   static Future<Map<String, dynamic>> removeStation(String id) {
-    return _httpManager.delete('/hems/basic/station/remove/$id');
+    return _httpManager.delete('/sunbox/basic/station/remove/$id');
   }
 
   // 添加设备接口
   static Future<Map<String, dynamic>> addDevice(Map<String, dynamic> data) {
-    return _httpManager.post('/hems/basic/device/addDevice', data: data);
+    return _httpManager.post('/sunbox/app/home/device/addDevice', data: data);
   }
 
   // 更换设备接口
   static Future<Map<String, dynamic>> replaceDevice(Map<String, dynamic> data) {
-    return _httpManager.post('/hems/basic/device/replaceDevice', data: data);
+    return _httpManager.post(
+      '/sunbox/app/home/device/replaceDevice',
+      data: data,
+    );
   }
 
   // 验证设备 SN 接口
   static Future<Map<String, dynamic>> checkSN(String cpSn) {
     return _httpManager.post(
-      '/hems/basic/device/checkSN',
+      '/sunbox/app/home/device/checkSN',
       data: {'cpSn': cpSn},
     );
   }
@@ -124,7 +127,7 @@ class ApiService {
   // 验证设备 MAC 接口
   static Future<Map<String, dynamic>> checkMac(String deviceMac) {
     return _httpManager.post(
-      '/hems/basic/device/checkMac',
+      '/sunbox/app/home/device/checkMac',
       data: {'deviceMac': deviceMac},
     );
   }
@@ -132,7 +135,7 @@ class ApiService {
   // 获取首页数据接口
   static Future<Map<String, dynamic>> getHomeData(String stationId) {
     return _httpManager.get(
-      '/hems/app/index/data',
+      '/sunbox/app/index/data',
       queryParameters: {'stationId': stationId},
     );
   }
@@ -166,12 +169,12 @@ class ApiService {
 
   // 获取工单列表接口
   static Future<Map<String, dynamic>> getWorkOrderList() {
-    return _httpManager.get('/hems/hemsWorkOrder/list');
+    return _httpManager.get('/sunbox/hemsWorkOrder/list');
   }
 
   // 添加工单接口
   static Future<Map<String, dynamic>> addWorkOrder(Map<String, dynamic> data) {
-    return _httpManager.post('/hems/hemsWorkOrder/addWorkOrder', data: data);
+    return _httpManager.post('/sunbox/hemsWorkOrder/addWorkOrder', data: data);
   }
 
   // 谷歌Token登录接口
@@ -198,7 +201,7 @@ class ApiService {
     Map<String, dynamic> queryParameters,
   ) {
     return _httpManager.get(
-      '/hems/app/device/energySources',
+      '/sunbox/app/device/energySources',
       queryParameters: queryParameters,
     );
   }
@@ -206,7 +209,7 @@ class ApiService {
   // 获取区域树接口
   static Future<Map<String, dynamic>> getRegionTree(String lang) {
     return _httpManager.get(
-      '/hems/basic/region/tree',
+      '/sunbox/basic/region/tree',
       queryParameters: {'lang': lang},
     );
   }
@@ -216,7 +219,7 @@ class ApiService {
     Map<String, dynamic> queryParameters,
   ) {
     return _httpManager.get(
-      '/hems/app/device/energySourcesChart',
+      '/sunbox/app/device/energySourcesChart',
       queryParameters: queryParameters,
     );
   }
@@ -226,7 +229,7 @@ class ApiService {
     Map<String, dynamic> queryParameters,
   ) {
     return _httpManager.get(
-      '/hems/app/device/energyDayChart',
+      '/sunbox/app/device/energyDayChart',
       queryParameters: queryParameters,
     );
   }
@@ -236,7 +239,7 @@ class ApiService {
     Map<String, dynamic> queryParameters,
   ) {
     return _httpManager.get(
-      '/hems/app/device/powerDayChart',
+      '/sunbox/app/device/powerDayChart',
       queryParameters: queryParameters,
     );
   }
@@ -244,7 +247,7 @@ class ApiService {
   // 获取设备图表数据接口 (新)
   static Future<Map<String, dynamic>> getMeterData(String deviceId) {
     return _httpManager.get(
-      '/hems/app/device/meterData',
+      '/sunbox/app/device/meterData',
       queryParameters: {'deviceId': deviceId},
     );
   }
@@ -255,23 +258,23 @@ class ApiService {
     String updateTime,
   ) {
     return _httpManager.get(
-      '/hems/app/device/fhChart',
+      '/sunbox/app/device/fhChart',
       queryParameters: {'deviceId': deviceId, 'updateTime': updateTime},
     );
   }
 
   static Future<Map<String, dynamic>> rpcControl(Map<String, dynamic> data) {
-    return _httpManager.get('/hems/common/rpc', queryParameters: data);
+    return _httpManager.get('/sunbox/common/rpc', queryParameters: data);
   }
 
   // 获取告警个数
   static Future<Map<String, dynamic>> getCountNumber() {
-    return _httpManager.get('/hems/alarm/alarmDataCount');
+    return _httpManager.get('/sunbox/alarm/alarmDataCount');
   }
 
   // 标记告警已读
   static Future<Map<String, dynamic>> markAlarmRead(int id) {
-    return _httpManager.get('/hems/alarm/read', queryParameters: {'id': id});
+    return _httpManager.get('/sunbox/alarm/read', queryParameters: {'id': id});
   }
 
   // 获取告警列表
@@ -290,7 +293,7 @@ class ApiService {
       params['isRead'] = isRead;
     }
     return _httpManager.get(
-      '/hems/alarm/alarmNewData',
+      '/sunbox/alarm/alarmNewData',
       queryParameters: params,
     );
   }
@@ -300,7 +303,7 @@ class ApiService {
     required String updateTime,
   }) {
     return _httpManager.get(
-      '/hems/app/device/flow',
+      '/sunbox/app/device/flow',
       queryParameters: {'stationId': stationId, 'updateTime': updateTime},
     );
   }

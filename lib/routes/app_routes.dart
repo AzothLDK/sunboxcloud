@@ -17,14 +17,11 @@ import '../pages/mine/setting/notification_settings_page.dart';
 import '../pages/mine/setting/account_page.dart';
 import '../pages/mine/setting/reset_password_page.dart';
 import '../pages/mine/setting/change_email_page.dart';
-import '../pages/mine/setting/edit_field_page.dart';
 import '../pages/mine/setting/notifications_page.dart';
 import '../pages/network_config/network_config_page.dart';
 import '../pages/network_config/add_device_page.dart';
 import '../pages/network_config/scan_page.dart';
 import '../pages/mine/device_detail_page.dart';
-
-import '../pages/mine/my_site_page.dart';
 import '../pages/mine/add_site_page.dart';
 
 class AppRoutes {

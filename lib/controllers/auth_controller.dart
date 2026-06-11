@@ -189,6 +189,7 @@ class AuthController extends GetxController {
           'password': password.value,
           'saveTime': DateTime.now().toIso8601String(),
         };
+
         await GlobalStorage.saveUserPassWord(credentials);
         // } else {
         //   // 否则清除保存的密码

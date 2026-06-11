@@ -13,7 +13,7 @@ class StationController extends GetxController {
   final selectedStationId = ''.obs;
   // 当前站点的设备列表
   final devices = <DeviceModel>[].obs;
-  // App 设备列表 (从新接口 /hems/app/device/getList 获取)
+  // App 设备列表 (从新接口 /sunbox/app/device/getList 获取)
   final appDevices = <DeviceModel>[].obs;
   // 首页数据
   final homeData = Rxn<HomeDataModel>();
