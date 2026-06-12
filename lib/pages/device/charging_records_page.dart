@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../../utils/constants.dart';
+import '../../utils/network/api_service.dart';
+import '../../utils/toast_utils.dart';
 import '../../widgets/custom_date_picker.dart';
 
 class ChargingRecordsPage extends StatefulWidget {
   final String? deviceId;
+  final String? deviceCode;
 
-  const ChargingRecordsPage({super.key, this.deviceId});
+  const ChargingRecordsPage({super.key, this.deviceId, this.deviceCode});
 
   @override
   State<ChargingRecordsPage> createState() => _ChargingRecordsPageState();
@@ -15,6 +18,54 @@ class ChargingRecordsPage extends StatefulWidget {
 
 class _ChargingRecordsPageState extends State<ChargingRecordsPage> {
   DateTime _selectedMonth = DateTime.now();
+
+  bool _isLoading = false;
+  List<Map<String, dynamic>> _records = [];
+  int _total = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchRecords();
+  }
+
+  Future<void> _fetchRecords() async {
+    final deviceId = widget.deviceId ?? widget.deviceCode;
+    if (deviceId == null || deviceId.isEmpty) {
+      ToastUtils.error('device_not_found'.tr);
+      return;
+    }
+    setState(() => _isLoading = true);
+    try {
+      final queryDate = DateFormat('yyyy-MM').format(_selectedMonth);
+      final res = await ApiService.getChargeRecordsByDate(
+        chargeConnectorId: deviceId,
+        queryDate: queryDate,
+      );
+      if (res['code'] == 200 && res['data'] != null) {
+        final data = res['data'] as Map<String, dynamic>;
+        final list = data['records'] as List<dynamic>? ?? [];
+        setState(() {
+          _records = list.map((e) => e as Map<String, dynamic>).toList();
+          _total = (data['total'] as num?)?.toInt() ?? 0;
+        });
+      } else {
+        ToastUtils.error(res['msg'] ?? 'load_failed'.tr);
+      }
+    } catch (e) {
+      ToastUtils.error('network_error'.tr);
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  String _formatRecordTime(String? start, String? end, bool isCharging) {
+    if (start == null || start.isEmpty) return '--';
+    if (isCharging || end == null || end.isEmpty) {
+      return '$start – now';
+    }
+    return '$start – $end';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -70,6 +121,7 @@ class _ChargingRecordsPageState extends State<ChargingRecordsPage> {
                   _selectedMonth.month - 1,
                 );
               });
+              _fetchRecords();
             },
             child: Container(
               width: 32,
@@ -108,6 +160,7 @@ class _ChargingRecordsPageState extends State<ChargingRecordsPage> {
                         _selectedMonth.month + 1,
                       );
                     });
+                    _fetchRecords();
                   }
                 : null,
             child: Container(
@@ -148,62 +201,45 @@ class _ChargingRecordsPageState extends State<ChargingRecordsPage> {
           setState(() {
             _selectedMonth = date;
           });
+          _fetchRecords();
         },
       ),
     );
   }
 
   Widget _buildRecordsList() {
-    // 模拟数据
-    final List<Map<String, dynamic>> mockRecords = [
-      {
-        'energy': '18.6',
-        'duration': '3h 24m',
-        'time': 'May 18 09:16 – 12:40',
-        'status': 'completed'.tr,
-      },
-      {
-        'energy': '24.8',
-        'duration': '8h 15m',
-        'time': 'May 11 22:00 – May 12 06:15',
-        'status': 'completed'.tr,
-      },
-      {
-        'energy': '12.3',
-        'duration': '3h 15m',
-        'time': 'May 10 14:30 – 17:45',
-        'status': 'completed'.tr,
-      },
-      {
-        'energy': '18.6',
-        'duration': '3h 24m',
-        'time': 'May 18 09:16 – 12:40',
-        'status': 'completed'.tr,
-      },
-      {
-        'energy': '24.8',
-        'duration': '8h 15m',
-        'time': 'May 11 22:00 – May 12 06:15',
-        'status': 'completed'.tr,
-      },
-      {
-        'energy': '12.3',
-        'duration': '3h 15m',
-        'time': 'May 10 14:30 – 17:45',
-        'status': 'completed'.tr,
-      },
-    ];
-
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_records.isEmpty) {
+      return Center(
+        child: Text(
+          'no_data'.tr,
+          style: const TextStyle(color: Colors.black45, fontSize: 14),
+        ),
+      );
+    }
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      itemCount: mockRecords.length,
+      itemCount: _records.length,
       itemBuilder: (context, index) {
-        final record = mockRecords[index];
+        final record = _records[index];
+        final isCharging = (record['status'] as int?) == 1;
+        final energy =
+            (record['chargePower'] as num?)?.toStringAsFixed(1) ?? '--';
+        final duration = record['chargeDuration'] as String? ?? '--';
+        final time = _formatRecordTime(
+          record['startTime'] as String?,
+          record['endTime'] as String?,
+          isCharging,
+        );
+        final status = isCharging ? 'charging'.tr : 'completed'.tr;
         return _buildRecordCard(
-          energy: record['energy'],
-          duration: record['duration'],
-          time: record['time'],
-          status: record['status'],
+          energy: energy,
+          duration: duration,
+          time: time,
+          status: status,
+          isCharging: isCharging,
         );
       },
     );
@@ -214,7 +250,9 @@ class _ChargingRecordsPageState extends State<ChargingRecordsPage> {
     required String duration,
     required String time,
     required String status,
+    required bool isCharging,
   }) {
+    final Color statusColor = isCharging ? Colors.orange : const Color(0xFF24C18F);
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -235,7 +273,7 @@ class _ChargingRecordsPageState extends State<ChargingRecordsPage> {
             width: 4,
             height: 40,
             decoration: BoxDecoration(
-              color: const Color(0xFF24C18F),
+              color: statusColor,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -288,13 +326,13 @@ class _ChargingRecordsPageState extends State<ChargingRecordsPage> {
                         vertical: 2,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF24C18F).withOpacity(0.1),
+                        color: statusColor.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
                         status,
-                        style: const TextStyle(
-                          color: Color(0xFF24C18F),
+                        style: TextStyle(
+                          color: statusColor,
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
                         ),

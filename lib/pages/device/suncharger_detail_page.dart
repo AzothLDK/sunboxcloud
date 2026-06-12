@@ -1,9 +1,12 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_echarts/flutter_echarts.dart';
 import '../../utils/constants.dart';
 import '../../controllers/station_controller.dart';
+import '../../utils/network/api_service.dart';
+import '../../utils/toast_utils.dart';
 import '../../widgets/custom_date_picker.dart';
 import 'charging_records_page.dart';
 import 'scheduled_task_page.dart';
@@ -11,8 +14,9 @@ import 'scheduled_task_page.dart';
 class SunChargerDetailPage extends StatefulWidget {
   final String? deviceName;
   final String? deviceId;
+  final String? deviceCode;
 
-  const SunChargerDetailPage({super.key, this.deviceName, this.deviceId});
+  const SunChargerDetailPage({super.key, this.deviceName, this.deviceId, this.deviceCode});
 
   @override
   State<SunChargerDetailPage> createState() => _SunChargerDetailPageState();
@@ -24,12 +28,34 @@ class _SunChargerDetailPageState extends State<SunChargerDetailPage> {
   String _energyTimeRange = 'Week';
   DateTime _selectedDate = DateTime.now();
 
+  // 实时充电状态数据
+  bool _isLoadingStatus = false;
+  int? _status;            // 0-可用, 1-充电中
+  String? _chargeStatus;   // cpStatus 字符串
+  int? _buttonType;        // 0-开始充电, 1-停止充电
+  String? _chargeOrder;
+  String? _transactionId;
+  String? _chargeStartTime;
+  double? _chargePower;
+  double? _chargeCurrent;
+  double? _chargeSoc;
+
+  // 最新充电记录
+  bool _isLoadingRecords = false;
+  List<Map<String, dynamic>> _latestRecords = [];
+
+  // 充电统计数据
+  bool _isLoadingStats = false;
+  double? _statTotalCharged;
+  int? _statChargeCount;
+  List<String> _statXAxis = [];
+  List<double> _statYAxis = [];
+
   @override
   void initState() {
     super.initState();
-    _energyTimeRange = 'week'.tr;
+    _energyTimeRange = 'week';
     if (widget.deviceId != null) {
-      // 模拟加载数据
       _fetchData();
     }
   }
@@ -40,17 +66,114 @@ class _SunChargerDetailPageState extends State<SunChargerDetailPage> {
     super.dispose();
   }
 
-  void _fetchData() {
-    // 这里可以调用接口获取充电记录和统计数据
-    // 目前先模拟数据
+  Future<void> _fetchData() async {
+    await _fetchChargeRealtime();
+    await _fetchLatestRecords();
+    await _fetchChargeStatistics();
+  }
+
+  Future<void> _fetchChargeRealtime() async {
+    if (widget.deviceId == null) return;
+    setState(() => _isLoadingStatus = true);
+    try {
+      final res = await ApiService.getChargeRealtime(widget.deviceId!);
+      if (res['code'] == 200 && res['data'] != null) {
+        final data = res['data'] as Map<String, dynamic>;
+        setState(() {
+          _status = (data['status'] as num?)?.toInt();
+          _chargeStatus = data['cpStatus'] as String?;
+          _buttonType = data['buttonType'] as int?;
+          _chargeOrder = data['chargeOrder'] as String?;
+          _transactionId = data['transactionId']?.toString();
+          _chargeStartTime = data['startTime'] as String?;
+          _chargePower = (data['power'] as num?)?.toDouble();
+          _chargeCurrent = (data['current'] as num?)?.toDouble();
+          _chargeSoc = (data['soc'] as num?)?.toDouble();
+        });
+      }
+    } catch (e) {
+      // 静默失败
+    } finally {
+      setState(() => _isLoadingStatus = false);
+    }
+  }
+
+  Future<void> _fetchLatestRecords() async {
+    if (widget.deviceId == null) return;
+    setState(() => _isLoadingRecords = true);
+    try {
+      final res = await ApiService.getLatestChargeRecords(widget.deviceId!);
+      if (res['code'] == 200 && res['data'] != null) {
+        final list = res['data'] as List<dynamic>;
+        setState(() {
+          _latestRecords = list.map((e) => e as Map<String, dynamic>).toList();
+        });
+      }
+    } catch (e) {
+      // 静默失败
+    } finally {
+      setState(() => _isLoadingRecords = false);
+    }
+  }
+
+  String _formatRecordTime(String? start, String? end, bool isCharging) {
+    if (start == null || start.isEmpty) return '--';
+    if (isCharging || end == null || end.isEmpty) {
+      return '$start – now';
+    }
+    return '$start – $end';
+  }
+
+  Future<void> _fetchChargeStatistics() async {
+    if (widget.deviceId == null) return;
+
+    DateTime start;
+    DateTime end;
+    if (_energyTimeRange == 'week') {
+      start = _selectedDate.subtract(Duration(days: _selectedDate.weekday - 1));
+      end = start.add(const Duration(days: 6));
+    } else if (_energyTimeRange == 'month') {
+      start = DateTime(_selectedDate.year, _selectedDate.month, 1);
+      end = DateTime(_selectedDate.year, _selectedDate.month + 1, 0);
+    } else {
+      start = DateTime(_selectedDate.year, 1, 1);
+      end = DateTime(_selectedDate.year, 12, 31);
+    }
+
+    final startStr = DateFormat('yyyy-MM-dd').format(start);
+    final endStr = DateFormat('yyyy-MM-dd').format(end);
+
+    setState(() => _isLoadingStats = true);
+    try {
+      final res = await ApiService.getChargeStatistics(
+        chargeConnectorId: widget.deviceId,
+        startDate: startStr,
+        endDate: endStr,
+        type: _energyTimeRange,
+      );
+      if (res['code'] == 200 && res['data'] != null) {
+        final data = res['data'] as Map<String, dynamic>;
+        setState(() {
+          _statTotalCharged = (data['totalCharged'] as num?)?.toDouble();
+          _statChargeCount = (data['chargeCount'] as num?)?.toInt();
+          final xList = data['xaxis'] as List<dynamic>? ?? [];
+          final yList = data['yaxis'] as List<dynamic>? ?? [];
+          _statXAxis = xList.map((e) => e.toString()).toList();
+          _statYAxis = yList.map((e) => (e as num).toDouble()).toList();
+        });
+      }
+    } catch (e) {
+      // 静默失败
+    } finally {
+      setState(() => _isLoadingStats = false);
+    }
   }
 
   void _onPrevDate() {
     setState(() {
-      if (_energyTimeRange == 'week'.tr || _energyTimeRange == 'Week') {
+      if (_energyTimeRange == 'week') {
         _selectedDate = _selectedDate.subtract(const Duration(days: 7));
-      } else if (_energyTimeRange == 'month'.tr ||
-          _energyTimeRange == 'Month') {
+      } else if (_energyTimeRange == 'month') {
         _selectedDate = DateTime(_selectedDate.year, _selectedDate.month - 1);
       } else {
         _selectedDate = DateTime(_selectedDate.year - 1);
@@ -61,7 +184,7 @@ class _SunChargerDetailPageState extends State<SunChargerDetailPage> {
 
   bool get _hasNextDate {
     final now = DateTime.now();
-    if (_energyTimeRange == 'week'.tr || _energyTimeRange == 'Week') {
+    if (_energyTimeRange == 'week') {
       final nextWeek = _selectedDate.add(const Duration(days: 7));
       final firstDayOfNextWeek = nextWeek.subtract(
         Duration(days: nextWeek.weekday - 1),
@@ -70,7 +193,7 @@ class _SunChargerDetailPageState extends State<SunChargerDetailPage> {
         Duration(days: now.weekday - 1),
       );
       return !firstDayOfNextWeek.isAfter(firstDayOfCurrentWeek);
-    } else if (_energyTimeRange == 'month'.tr || _energyTimeRange == 'Month') {
+    } else if (_energyTimeRange == 'month') {
       final nextMonth = DateTime(
         _selectedDate.year,
         _selectedDate.month + 1,
@@ -85,10 +208,9 @@ class _SunChargerDetailPageState extends State<SunChargerDetailPage> {
   void _onNextDate() {
     if (!_hasNextDate) return;
     setState(() {
-      if (_energyTimeRange == 'week'.tr || _energyTimeRange == 'Week') {
+      if (_energyTimeRange == 'week') {
         _selectedDate = _selectedDate.add(const Duration(days: 7));
-      } else if (_energyTimeRange == 'month'.tr ||
-          _energyTimeRange == 'Month') {
+      } else if (_energyTimeRange == 'month') {
         _selectedDate = DateTime(_selectedDate.year, _selectedDate.month + 1);
       } else {
         _selectedDate = DateTime(_selectedDate.year + 1);
@@ -98,13 +220,13 @@ class _SunChargerDetailPageState extends State<SunChargerDetailPage> {
   }
 
   String get _dateDisplayText {
-    if (_energyTimeRange == 'week'.tr || _energyTimeRange == 'Week') {
+    if (_energyTimeRange == 'week') {
       final firstDayOfWeek = _selectedDate.subtract(
         Duration(days: _selectedDate.weekday - 1),
       );
       final lastDayOfWeek = firstDayOfWeek.add(const Duration(days: 6));
       return '${DateFormat('MMM d').format(firstDayOfWeek)} – ${DateFormat('d, yyyy').format(lastDayOfWeek)}';
-    } else if (_energyTimeRange == 'month'.tr || _energyTimeRange == 'Month') {
+    } else if (_energyTimeRange == 'month') {
       return DateFormat(
         'MMMM yyyy',
         Get.locale?.toString(),
@@ -116,9 +238,9 @@ class _SunChargerDetailPageState extends State<SunChargerDetailPage> {
 
   Future<void> _selectDate() async {
     CustomDatePickerMode mode;
-    if (_energyTimeRange == 'week'.tr || _energyTimeRange == 'Week') {
+    if (_energyTimeRange == 'week') {
       mode = CustomDatePickerMode.day;
-    } else if (_energyTimeRange == 'month'.tr || _energyTimeRange == 'Month') {
+    } else if (_energyTimeRange == 'month') {
       mode = CustomDatePickerMode.month;
     } else {
       mode = CustomDatePickerMode.year;
@@ -213,6 +335,16 @@ class _SunChargerDetailPageState extends State<SunChargerDetailPage> {
   }
 
   Widget _buildStatusCard() {
+    final bool isCharging = _status == 1;
+    final bool showStop = _buttonType == 1;
+    final String statusText = _chargeStatus ?? '--';
+        
+    final String startTimeText = _chargeStartTime ?? '--:--';
+    final String powerText = _chargePower != null ? _chargePower!.toStringAsFixed(1) : '--';
+    final String currentText = _chargeCurrent != null ? _chargeCurrent!.toStringAsFixed(0) : '--';
+    final double socValue = (_chargeSoc ?? 0) / 100.0;
+    final String socText = _chargeSoc != null ? '${_chargeSoc!.toStringAsFixed(0)}%' : '--%';
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -241,7 +373,7 @@ class _SunChargerDetailPageState extends State<SunChargerDetailPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'charging'.tr,
+                    statusText,
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 22,
@@ -250,7 +382,7 @@ class _SunChargerDetailPageState extends State<SunChargerDetailPage> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${'started'.tr} 09:16',
+                    '${'started'.tr} $startTimeText',
                     style: TextStyle(
                       color: Colors.white.withOpacity(0.8),
                       fontSize: 14,
@@ -264,12 +396,62 @@ class _SunChargerDetailPageState extends State<SunChargerDetailPage> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: TextButton.icon(
-                  onPressed: () {},
-                  icon: const Icon(Icons.stop, color: Colors.orange, size: 20),
+                  onPressed: _isLoadingStatus
+                      ? null
+                      : () async {
+                          if (widget.deviceId == null) return;
+                          try {
+                            if (showStop) {
+                              if (_chargeOrder == null) return;
+                              final res = await ApiService.stopCharge(
+                                chargeOrder: _chargeOrder!,
+                                transactionId: _transactionId,
+                              );
+                              if (res['code'] == 200) {
+                                ToastUtils.success('stop_charge_success'.tr);
+                              } else {
+                                ToastUtils.error(res['msg'] ?? 'stop_charge_failed'.tr);
+                              }
+                            } else {
+                              String? idTag;
+                              try {
+                                final idTagRes =
+                                    await ApiService.getDefaultIdTag(
+                                  widget.deviceId!,
+                                );
+                                if (idTagRes['code'] == 200 &&
+                                    idTagRes['data'] != null) {
+                                  idTag = idTagRes['data']['idTag'] as String?;
+                                }
+                              } catch (_) {
+                                // 静默失败
+                              }
+                              if (idTag != null) {
+                                final res = await ApiService.startCharge(
+                                  chargeConnectorId: widget.deviceId!,
+                                  idTag: idTag,
+                                );
+                                if (res['code'] == 200) {
+                                  ToastUtils.success('start_charge_success'.tr);
+                                } else {
+                                  ToastUtils.error(res['msg'] ?? 'start_charge_failed'.tr);
+                                }
+                              }
+                            }
+                            _fetchChargeRealtime();
+                          } catch (e) {
+                            ToastUtils.error('network_error'.tr);
+                          }
+                        },
+                  icon: Icon(
+                    showStop ? Icons.stop : Icons.play_arrow,
+                    color: showStop ? Colors.orange : const Color(0xFF24C18F),
+                    size: 20,
+                  ),
                   label: Text(
-                    'stop'.tr,
-                    style: const TextStyle(
-                      color: Colors.orange,
+                    showStop ? 'stop'.tr : 'start'.tr,
+                    style: TextStyle(
+                      color: showStop ? Colors.orange : const Color(0xFF24C18F),
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -283,9 +465,9 @@ class _SunChargerDetailPageState extends State<SunChargerDetailPage> {
             children: [
               Row(
                 children: [
-                  _buildMetricItem('7.2', 'kW'),
+                  _buildMetricItem(powerText, 'kW'),
                   const SizedBox(width: 16),
-                  _buildMetricItem('32', 'A'),
+                  _buildMetricItem(currentText, 'A'),
                 ],
               ),
               Stack(
@@ -295,7 +477,7 @@ class _SunChargerDetailPageState extends State<SunChargerDetailPage> {
                     width: 60,
                     height: 60,
                     child: CircularProgressIndicator(
-                      value: 0.0,
+                      value: socValue,
                       strokeWidth: 5,
                       backgroundColor: Colors.white.withOpacity(0.2),
                       valueColor: const AlwaysStoppedAnimation<Color>(
@@ -303,9 +485,9 @@ class _SunChargerDetailPageState extends State<SunChargerDetailPage> {
                       ),
                     ),
                   ),
-                  const Text(
-                    '0%',
-                    style: TextStyle(
+                  Text(
+                    socText,
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -368,7 +550,7 @@ class _SunChargerDetailPageState extends State<SunChargerDetailPage> {
             ),
             TextButton(
               onPressed: () =>
-                  Get.to(() => ChargingRecordsPage(deviceId: widget.deviceId)),
+                  Get.to(() => ChargingRecordsPage(deviceId: widget.deviceId, deviceCode: widget.deviceCode)),
               child: Row(
                 children: [
                   Text(
@@ -385,29 +567,40 @@ class _SunChargerDetailPageState extends State<SunChargerDetailPage> {
             ),
           ],
         ),
-        _buildRecordCard(
-          energy: '18.6',
-          duration: '3h 24m',
-          time: '09:16 – now',
-          status: 'charging'.tr,
-          isCharging: true,
-        ),
-        const SizedBox(height: 12),
-        _buildRecordCard(
-          energy: '24.8',
-          duration: '8h 15m',
-          time: 'May 11 22:00 – May 12 06:15',
-          status: 'completed'.tr,
-          isCharging: false,
-        ),
-        const SizedBox(height: 12),
-        _buildRecordCard(
-          energy: '12.3',
-          duration: '3h 15m',
-          time: 'May 10 14:30 – 17:45',
-          status: 'completed'.tr,
-          isCharging: false,
-        ),
+        if (_isLoadingRecords)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 20),
+            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+          )
+        else if (_latestRecords.isEmpty)
+          const SizedBox.shrink()
+        else
+          ..._latestRecords.asMap().entries.expand((entry) {
+            final record = entry.value;
+            final isCharging = (record['status'] as int?) == 1;
+            final energy =
+                (record['chargePower'] as num?)?.toStringAsFixed(1) ?? '--';
+            final duration = record['chargeDuration'] as String? ?? '--';
+            final time = _formatRecordTime(
+              record['startTime'] as String?,
+              record['endTime'] as String?,
+              isCharging,
+            );
+            final status = isCharging ? 'charging'.tr : 'completed'.tr;
+            final widgets = <Widget>[
+              _buildRecordCard(
+                energy: energy,
+                duration: duration,
+                time: time,
+                status: status,
+                isCharging: isCharging,
+              ),
+            ];
+            if (entry.key != _latestRecords.length - 1) {
+              widgets.add(const SizedBox(height: 12));
+            }
+            return widgets;
+          }).toList(),
       ],
     );
   }
@@ -571,9 +764,9 @@ class _SunChargerDetailPageState extends State<SunChargerDetailPage> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    _buildTimeTab('week'.tr),
-                    _buildTimeTab('month'.tr),
-                    _buildTimeTab('year'.tr),
+                    _buildTimeTab('week'),
+                    _buildTimeTab('month'),
+                    _buildTimeTab('year'),
                   ],
                 ),
               ),
@@ -610,7 +803,7 @@ class _SunChargerDetailPageState extends State<SunChargerDetailPage> {
                 child: _buildSummaryCard(
                   icon: Icons.flash_on,
                   label: 'charged'.tr,
-                  value: '3.64',
+                  value: (_statTotalCharged ?? 0).toStringAsFixed(2),
                   unit: 'kWh',
                 ),
               ),
@@ -619,7 +812,7 @@ class _SunChargerDetailPageState extends State<SunChargerDetailPage> {
                 child: _buildSummaryCard(
                   icon: Icons.history,
                   label: 'charge_count'.tr,
-                  value: '10',
+                  value: (_statChargeCount ?? 0).toString(),
                   unit: '',
                 ),
               ),
@@ -640,7 +833,7 @@ class _SunChargerDetailPageState extends State<SunChargerDetailPage> {
                 },
                 "xAxis": {
                   "type": "category",
-                  "data": ["05-11", "05-12", "05-13", "05-14", "05-15", "05-16", "05-17"],
+                  "data": ${jsonEncode(_statXAxis.isEmpty ? [] : _statXAxis)},
                   "axisLine": {"show": false},
                   "axisTick": {"show": false},
                   "axisLabel": {"color": "#999999"}
@@ -653,7 +846,7 @@ class _SunChargerDetailPageState extends State<SunChargerDetailPage> {
                 },
                 "series": [
                   {
-                    "data": [0, 0.6, 3.0, 0, 0, 0, 0],
+                    "data": ${jsonEncode(_statYAxis.isEmpty ? [] : _statYAxis)},
                     "type": "bar",
                     "barWidth": "10",
                     "itemStyle": {
@@ -696,7 +889,7 @@ class _SunChargerDetailPageState extends State<SunChargerDetailPage> {
               : null,
         ),
         child: Text(
-          label,
+          label.tr,
           style: TextStyle(
             color: isSelected ? primaryColor : Colors.black54,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
@@ -769,7 +962,7 @@ class _SunChargerDetailPageState extends State<SunChargerDetailPage> {
           GestureDetector(
             onTap: () {
               Get.back(); // 先关闭 BottomSheet
-              Get.to(() => ScheduledTaskPage(deviceId: widget.deviceId));
+              Get.to(() => ScheduledTaskPage(deviceId: widget.deviceId, deviceCode: widget.deviceCode));
             },
             child: Container(
               padding: const EdgeInsets.all(16),
@@ -809,3 +1002,4 @@ class _SunChargerDetailPageState extends State<SunChargerDetailPage> {
     );
   }
 }
+

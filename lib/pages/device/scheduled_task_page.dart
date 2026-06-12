@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../utils/constants.dart';
+import '../../utils/network/api_service.dart';
+import '../../utils/toast_utils.dart';
 
 class ScheduledTaskPage extends StatefulWidget {
   final String? deviceId;
+  final String? deviceCode;
 
-  const ScheduledTaskPage({super.key, this.deviceId});
+  const ScheduledTaskPage({super.key, this.deviceId, this.deviceCode});
 
   @override
   State<ScheduledTaskPage> createState() => _ScheduledTaskPageState();
@@ -17,6 +20,70 @@ class _ScheduledTaskPageState extends State<ScheduledTaskPage> {
   TimeOfDay _stopTime = const TimeOfDay(hour: 7, minute: 0);
   String _stopMode = 'timed_stop'; // 'limited_energy' or 'timed_stop'
   double _maxEnergy = 50.0;
+  String? _taskConfigId;
+  bool _isLoading = false;
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTaskConfig();
+  }
+
+  Future<void> _loadTaskConfig() async {
+    final deviceId = widget.deviceId ?? widget.deviceCode;
+    if (deviceId == null || deviceId.isEmpty) return;
+    setState(() => _isLoading = true);
+    try {
+      final res = await ApiService.getChargeTaskConfig(chargeOrder: deviceId);
+      if (res['code'] == 200 && res['data'] != null) {
+        final data = res['data'] as Map<String, dynamic>;
+        final enableTask = (data['enableTask'] as num?)?.toInt() ?? 1;
+        final startTimeStr = data['startTime'] as String?;
+        final stopMode = (data['stopMode'] as num?)?.toInt() ?? 1;
+        final stopTimeStr = data['stopTime'] as String?;
+        final maxPower = (data['maxPower'] as num?)?.toDouble();
+        final id = data['id'] as String?;
+
+        setState(() {
+          _taskConfigId = id;
+          _isTimedEnabled = enableTask == 1;
+          if (stopMode == 0) {
+            _stopMode = 'limited_energy';
+          } else {
+            _stopMode = 'timed_stop';
+          }
+          if (startTimeStr != null && startTimeStr.isNotEmpty) {
+            final parts = startTimeStr.split(':');
+            if (parts.length == 2) {
+              _startTime = TimeOfDay(
+                hour: int.tryParse(parts[0]) ?? 22,
+                minute: int.tryParse(parts[1]) ?? 0,
+              );
+            }
+          }
+          if (stopTimeStr != null && stopTimeStr.isNotEmpty) {
+            final parts = stopTimeStr.split(':');
+            if (parts.length == 2) {
+              _stopTime = TimeOfDay(
+                hour: int.tryParse(parts[0]) ?? 7,
+                minute: int.tryParse(parts[1]) ?? 0,
+              );
+            }
+          }
+          if (maxPower != null) {
+            _maxEnergy = maxPower;
+          }
+        });
+      }
+    } catch (_) {
+      // 静默失败，使用默认值
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -274,10 +341,7 @@ class _ScheduledTaskPageState extends State<ScheduledTaskPage> {
         width: double.infinity,
         height: 50,
         child: ElevatedButton(
-          onPressed: () {
-            // Save logic
-            Get.back();
-          },
+          onPressed: _isSaving ? null : _saveTaskConfig,
           style: ElevatedButton.styleFrom(
             backgroundColor: primaryColor,
             shape: RoundedRectangleBorder(
@@ -285,17 +349,78 @@ class _ScheduledTaskPageState extends State<ScheduledTaskPage> {
             ),
             elevation: 0,
           ),
-          child: Text(
-            'save'.tr,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          child: _isSaving
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : Text(
+                  'save'.tr,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
         ),
       ),
     );
+  }
+
+  Future<void> _saveTaskConfig() async {
+    final deviceId = widget.deviceId ?? widget.deviceCode;
+    if (deviceId == null || deviceId.isEmpty) {
+      ToastUtils.error('device_not_found'.tr);
+      return;
+    }
+
+    setState(() => _isSaving = true);
+
+    final startTimeStr =
+        '${_startTime.hour.toString().padLeft(2, '0')}:${_startTime.minute.toString().padLeft(2, '0')}';
+
+    String? stopTimeStr;
+    double? maxPower;
+    final stopMode = _stopMode == 'timed_stop' ? 1 : 0;
+
+    if (_stopMode == 'timed_stop') {
+      stopTimeStr =
+          '${_stopTime.hour.toString().padLeft(2, '0')}:${_stopTime.minute.toString().padLeft(2, '0')}';
+    } else {
+      maxPower = _maxEnergy;
+    }
+
+    try {
+      final response = await ApiService.saveOrUpdateChargeTaskConfig(
+        chargeOrder: deviceId,
+        enableTask: _isTimedEnabled ? 1 : 0,
+        id: _taskConfigId,
+        startTime: startTimeStr,
+        stopMode: stopMode,
+        stopTime: stopTimeStr,
+        maxPower: maxPower,
+      );
+
+      if (response['code'] == 200) {
+        ToastUtils.success('save_successfully'.tr);
+        await Future.delayed(const Duration(milliseconds: 800));
+        if (mounted) {
+          Get.back(result: true);
+        }
+      } else {
+        ToastUtils.error(response['msg'] ?? 'save_failed'.tr);
+      }
+    } catch (e) {
+      ToastUtils.error('network_error'.tr);
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
+    }
   }
 
   Future<void> _selectTime(BuildContext context, bool isStart) async {
