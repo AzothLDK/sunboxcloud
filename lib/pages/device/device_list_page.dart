@@ -331,7 +331,7 @@ class _DeviceListPageState extends State<DeviceListPage> {
           Get.to(
             () => SunChargerDetailPage(
               deviceName: deviceName,
-              deviceId: device.id,
+              deviceId: device.deviceCode,
             ),
           );
         } else {
