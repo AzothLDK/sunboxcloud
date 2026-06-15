@@ -41,7 +41,7 @@ const String host = "http://192.168.20.222:44201/"; //测试
 
 // const String host = "http://192.168.20.182:8001/";
 
-// const String host = "http://192.168.1.181:31376";  //测试
+// const String host = "http://192.168.1.181:31376"; //测试
 
 // const String host = "http://58.214.25.130:10880/"; //外网映射
 
