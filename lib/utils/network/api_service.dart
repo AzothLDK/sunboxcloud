@@ -307,4 +307,127 @@ class ApiService {
       queryParameters: {'stationId': stationId, 'updateTime': updateTime},
     );
   }
+
+  // 查询充电实时数据
+  static Future<Map<String, dynamic>> getChargeRealtime(
+    String chargeConnectorId,
+  ) {
+    return _httpManager.get(
+      '/sunbox/app/charge/realtime',
+      queryParameters: {'chargeConnectorId': chargeConnectorId},
+    );
+  }
+
+  // 获取当前用户可用于启动的默认idTag
+  static Future<Map<String, dynamic>> getDefaultIdTag(
+    String chargeConnectorId,
+  ) {
+    return _httpManager.get(
+      '/sunbox/app/charge/idTag/default',
+      queryParameters: {'chargeConnectorId': chargeConnectorId},
+    );
+  }
+
+  // 按日期查询充电记录
+  static Future<Map<String, dynamic>> getChargeRecordsByDate({
+    required String chargeConnectorId,
+    required String queryDate,
+  }) {
+    return _httpManager.post(
+      '/sunbox/app/charge/records-by-date',
+      data: {'chargeConnectorId': chargeConnectorId, 'queryDate': queryDate},
+    );
+  }
+
+  // 开始充电
+  static Future<Map<String, dynamic>> startCharge({
+    required String chargeConnectorId,
+    required String idTag,
+  }) {
+    return _httpManager.post(
+      '/sunbox/app/charge/start',
+      data: {'chargeConnectorId': chargeConnectorId, 'idTag': idTag},
+    );
+  }
+
+  // 结束充电
+  static Future<Map<String, dynamic>> stopCharge({
+    required String chargeOrder,
+    String? transactionId,
+  }) {
+    final Map<String, dynamic> data = {'chargeOrder': chargeOrder};
+    if (transactionId != null) {
+      data['transactionId'] = transactionId;
+    }
+    return _httpManager.post('/sunbox/app/charge/stop', data: data);
+  }
+
+  // 查询最新3条充电记录
+  static Future<Map<String, dynamic>> getLatestChargeRecords(
+    String chargeConnectorId,
+  ) {
+    return _httpManager.get(
+      '/sunbox/app/charge/latest-records',
+      queryParameters: {'chargeConnectorId': chargeConnectorId},
+    );
+  }
+
+  // 新增或修改充电任务配置
+  static Future<Map<String, dynamic>> saveOrUpdateChargeTaskConfig({
+    required String chargeOrder,
+    required int enableTask,
+    String? id,
+    double? maxPower,
+    required String startTime,
+    required int stopMode,
+    String? stopTime,
+  }) {
+    final Map<String, dynamic> data = {
+      'chargeOrder': chargeOrder,
+      'enableTask': enableTask,
+      'startTime': startTime,
+      'stopMode': stopMode,
+    };
+    if (id != null && id.isNotEmpty) {
+      data['id'] = id;
+    }
+    if (maxPower != null) {
+      data['maxPower'] = maxPower;
+    }
+    if (stopTime != null && stopTime.isNotEmpty) {
+      data['stopTime'] = stopTime;
+    }
+    return _httpManager.post(
+      '/sunbox/charge/task-config/saveOrUpdate',
+      data: data,
+    );
+  }
+
+  // 根据充电枪号查询定时任务配置
+  static Future<Map<String, dynamic>> getChargeTaskConfig({
+    required String chargeOrder,
+  }) {
+    return _httpManager.get(
+      '/sunbox/charge/task-config/getByChargeOrder',
+      queryParameters: {'chargeOrder': chargeOrder},
+    );
+  }
+
+  // 充电统计
+  static Future<Map<String, dynamic>> getChargeStatistics({
+    String? chargeConnectorId,
+    required String startDate,
+    required String endDate,
+    required String type,
+  }) {
+    final Map<String, dynamic> data = {
+      'startDate': startDate,
+      'endDate': endDate,
+      'type': type,
+    };
+    if (chargeConnectorId != null) {
+      data['chargeConnectorId'] = chargeConnectorId;
+    }
+    return _httpManager.post('/sunbox/app/charge/statistics', data: data);
+  }
 }
